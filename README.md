@@ -17,7 +17,7 @@ Proyecto de análisis de datos que incluye la conversión de archivos planos (CS
 
 ## 📖 Descripción
 
-Este proyecto procesa tres fuentes de datos en formato CSV (`RegistrosDPA`, `TiemposManuales`, `RolesAreas`) y las consolida en una única base de datos SQLite (`Procesos.db`), lista para ser consultada y analizada en etapas posteriores del proyecto.
+Este proyecto procesa tres fuentes de datos en formato CSV (`RegistrosDPA`, `TiemposManuales`, `RolesAreas`), las consolida en una base de datos SQLite (`Procesos.db`), y posteriormente realiza una etapa de preprocesamiento y limpieza automatizada mediante Jupyter Notebooks para obtener una base de datos final (`Procesos_clean.db`) lista para modelado y análisis.
 
 ---
 
@@ -25,16 +25,25 @@ Este proyecto procesa tres fuentes de datos en formato CSV (`RegistrosDPA`, `Tie
 
 ```
 Proyecto1Especializacion/
-├── Data/
-│   ├── RegistrosDPA.csv
-│   ├── TiemposManuales.csv
-│   ├── RolesAreas.csv
-│   ├── csv_to_sqlite.py     ← script utilizado para convertir los archivos CSV a SQLite
-│   └── Procesos.db          ← Información a procesar
-├── .venv/                   ← entorno virtual
+├── data/
+│   ├── raw/                         ← archivos fuente en formato CSV
+│   │   ├── RegistrosDPA.csv
+│   │   ├── TiemposManuales.csv
+│   │   └── RolesAreas.csv
+│   └── database/                    ← bases de datos SQLite
+│       ├── Procesos.db              ← base de datos original unificada
+│       └── Procesos_clean.db        ← base de datos limpia y preprocesada
+├── scripts/
+│   └── csv_to_sqlite.py             ← convierte los CSV a tablas SQLite
+├── notebooks/
+│   └── 01_preprocesamiento.ipynb    ← notebook con limpieza y normalización de datos
+├── src/                             ← módulos del proyecto (en desarrollo)
+├── tests/                           ← pruebas automatizadas (en desarrollo)
+├── .venv/                           ← entorno virtual
 ├── main.py
 ├── pyproject.toml
-├── .python-version          ← fija la versión Python a 3.14
+├── uv.lock                          ← versiones fijadas de dependencias
+├── .python-version                  ← fija la versión Python a 3.14
 └── README.md
 ```
 
