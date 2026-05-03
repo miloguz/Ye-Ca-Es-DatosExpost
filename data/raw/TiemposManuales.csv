@@ -1,0 +1,96 @@
+﻿Proyecto;NombreBot;TiempoManualHoras;Tipo;Tecnologia;FechaSalidaProduccion;Estado;Desarrollador
+NULL;RIPS Sura;8.5;Ejecuciones;Uipath;03/11/2020;Activo;Esneyder Gomez Marin
+NULL;Tasa de usura;0.166666666666667;Ejecuciones;IRPA;;Inactivo;
+NULL;ReporteVacunasAndi;1.5;Transacciones;Uipath;25/08/2021;Inactivo;Esneyder Gomez Marin
+NULL;Informe y cruce primera infancia;9;Ejecuciones;Uipath;01/08/2022;Activo;
+NULL;Asignación Ingresos;2.5;Ejecuciones;IRPA;;Inactivo;
+NULL;DTF;0.25;Ejecuciones;IRPA;;Inactivo;
+NULL;SubsidiosEmpleo;6;Ejecuciones;Uipath;05/07/2022;Activo;Esneyder Gomez Marin
+NULL;RPA_Certificados_Empleo;0.1603;Transacciones;Power Automate;01/08/2025;Activo;Esneyder Gomez Marin
+NULL;Base detallada;8;Ejecuciones;Uipath;01/02/2023;Inactivo;Esneyder Gomez Marin
+NULL;Vacunacion tradicional Validacion Contrasenias;0.033;Ejecuciones;Uipath;19/06/2023;Inactivo;Esneyder Gomez Marin
+NULL;PerfilamientoInformatico;0.33;Transacciones;Uipath;;Inactivo;
+NULL;Aula digital;0.07;Transacciones;Uipath;24/10/2022;Inactivo;Yennifer Vanessa Serna Carvajal
+NULL;Vacunacion tradicional Extraccion De Lotes;0.21;Ejecuciones;Uipath;19/06/2023;Inactivo;Esneyder Gomez Marin
+NULL;RPA_AfiliacionesEmpleadores;3;Ejecuciones;Power Automate;25/07/2024;Inactivo;Esneyder Gomez Marin
+NULL;RPA_ReporteGIASS;2;Ejecuciones;UiPath;14/02/2024;Inactivo;Esneyder Gomez Marin
+NULL;Vacunacion tradicional carga de información;0.15;Transacciones;Uipath;19/06/2023;Inactivo;Esneyder Gomez Marin
+NULL;Facturación salud - Por eventos;0;Transacciones;UiPath;;Inactivo;Esneyder Gomez Marin
+NULL;Facturación Electrónica;0.0275;Transacciones;Power Automate;12/03/2025;Activo;Camilo Guzman Velasquez
+NULL;Informe Cubo de Ventas;1.9;Ejecuciones;Uipath;;Activo;Yennifer Vanessa Serna Carvajal
+NULL;RPA_VacunacionCovid;0.15;Transacciones;Power Automate;10/01/2024;Inactivo;Esneyder Gomez Marin
+NULL;RPA_Validacion_Automatica_Documentos;0.0386666666666667;Transacciones;Uipath;07/07/2023;Activo;
+NULL;ContingenciaVacunacionPrivados;0.016;Transacciones;Uipath;15/10/2021;Inactivo;Esneyder Gomez Marin
+NULL;Aportes Novedades PILA R5;0.0344583987476714;Transacciones;Uipath;04/02/2022;Inactivo;Yennifer Vanessa Serna Carvajal
+NULL;Novedades Nomina Instructores;0.083;Transacciones;Uipath;01/06/2021;Activo;Camilo Guzman Velasquez
+NULL;AtomHojaVida;0.02;Transacciones;Uipath;07/12/2020;Activo;Esneyder Gomez Marin
+NULL;RIPS Extranjeros;1.83333333333333;Ejecuciones;Uipath;03/11/2020;Activo;Esneyder Gomez Marin
+NULL;Pignoración cartera castigada;0.666666666666667;Ejecuciones;IRPA;;Inactivo;
+NULL;ProgramadorCitas- Pediatria;0.0916666666666667;Transacciones;Uipath;11/03/2022;Inactivo;Esneyder Gomez Marin
+NULL;Parametricas Dos;0;Transacciones;Uipath;09/05/2022;Inactivo;Esneyder Gomez Marin
+NULL;Facturas pendientes por liberar;2;Ejecuciones;UiPath;16/11/2023;Activo;Yennifer Vanessa Serna Carvajal
+NULL;RPA_Sisben;0.0416;Transacciones;Uipath;12/05/2023;Inactivo;Yennifer Vanessa Serna Carvajal
+NULL;RPASubvencionesFacturador;0.87;Transacciones;Uipath;03/05/2023;Activo;
+NULL;RPA Actualizacion TRM;0.166667;Ejecuciones;UiPath;01/09/2023;Activo;Camilo Guzman Velasquez
+NULL;RPA Estaticas SISE;15.9;Ejecuciones;UiPath;01/11/2024;Activo;Camilo Guzman Velasquez
+NULL;Facturación salud - Capitados;0;Transacciones;UiPath;;Inactivo;Esneyder Gomez Marin
+NULL;Aportes Novedades PILA R6;0.0344584056357928;Transacciones;Uipath;20/05/2022;Inactivo;Yennifer Vanessa Serna Carvajal
+NULL;Carga Masiva Trabajadores Dependientes;2;Transacciones;Uipath;20/09/2021;Inactivo;Camilo Guzman Velasquez
+NULL;Aseguramiento venta empresarial - Transcriptor;0.0333333333333333;Transacciones;Uipath;23/05/2022;Activo;Esneyder Gomez Marin
+NULL;Extracción SAP para subsidios (Programador);0.5;Ejecuciones;IRPA;;Inactivo;
+NULL;Aportes Novedades PILA R2;0.172291958137101;Transacciones;Uipath;26/11/2021;Inactivo;Yennifer Vanessa Serna Carvajal
+NULL;Convocatorias Atom;3;Ejecuciones;Uipath;08/06/2022;Activo;Esneyder Gomez Marin
+NULL;Informes PQ - Gestantes, Crecimiento y Desarrollo, ASMA;11;Ejecuciones;Uipath;;Inactivo;
+NULL;RPA_Remesadora;1.25;Ejecuciones;Uipath;18/10/2023;Activo;Esneyder Gomez Marin
+NULL;RPA_ClasificacionPQRS_Clasificador;0.0208;Transacciones;UiPath;18/12/2023;Activo;Esneyder Gomez Marin
+NULL;Gestión de Contratos y Alertas Financiera TI;0.2;Ejecuciones;Uipath;01/11/2022;Activo;Yennifer Vanessa Serna Carvajal
+NULL;Atom;2;Ejecuciones;Uipath;07/12/2020;Activo;Esneyder Gomez Marin
+NULL;Plan Operativo Q10 - Preescolar;2;Ejecuciones;Uipath;18/08/2022;Inactivo;
+NULL;Plan Operativo Q10;1.2;Ejecuciones;Uipath;18/08/2022;Inactivo;Yennifer Vanessa Serna Carvajal
+NULL;Diagnostico Bienestar Informe Avances;0.2375;Transacciones;Uipath;01/11/2023;Inactivo;Yennifer Vanessa Serna Carvajal
+NULL;IA_Novedades_Nomina;0.075;Transacciones;Power Automate;16/01/2025;Activo;Camilo Guzman Velasquez
+NULL;Transmitir Facturas;0.016;Transacciones;Uipath;26/09/2024;Activo;
+NULL;Performer_Medios_De_Pago;0.167;Transacciones;Python;20/11/2024;Activo;Esneyder Gomez Marin
+NULL;Diagnostico Bienestar;3.705;Transacciones;Uipath;01/11/2023;Inactivo;Yennifer Vanessa Serna Carvajal
+NULL;GestorVinculados;0.017;Transacciones;Uipath;22/03/2022;Inactivo;Esneyder Gomez Marin
+NULL;Aportes Novedades PILA R1;0.6585;Ejecuciones;Uipath;26/11/2021;Inactivo;Yennifer Vanessa Serna Carvajal
+NULL;CorreccionesPNV;0.000277778;Transacciones;Uipath;25/01/2022;Inactivo;Esneyder Gomez Marin
+NULL;RPA Informe Posiciones;3;Transacciones;Uipath;;Inactivo;
+NULL;Aportes Novedades PILA R5;2.634;Ejecuciones;Uipath;04/02/2022;Inactivo;Yennifer Vanessa Serna Carvajal
+NULL;Aprendizajes Esenciales Q10;6;Ejecuciones;Uipath;01/08/2022;Inactivo;Yennifer Vanessa Serna Carvajal
+NULL;Anulacion Matriculas;0.03;Transacciones;Uipath;05/05/2021;Inactivo;
+NULL;GestorRemitidos;0.017;Transacciones;Uipath;07/03/2022;Activo;Esneyder Gomez Marin
+NULL;Aportes Novedades PILA R6;2.56;Ejecuciones;Uipath;20/05/2022;Inactivo;Yennifer Vanessa Serna Carvajal
+NULL;Informe Covid;0.083;Transacciones;Uipath;01/03/2021;Inactivo;Esneyder Gomez Marin
+NULL;Aportes Novedades PILA R4;1.9755;Ejecuciones;Uipath;10/12/2021;Inactivo;Yennifer Vanessa Serna Carvajal
+NULL;Extractor_AgendamientoAutomatico;0.266666666666667;Ejecuciones;Uipath;11/03/2022;Inactivo;Esneyder Gomez Marin
+NULL;Aportes Novedades PILA R3;1.317;Ejecuciones;Uipath;26/11/2021;Inactivo;Yennifer Vanessa Serna Carvajal
+NULL;(BOT Extractor + BOT Facturador de subvenciones);4.26;Ejecuciones;IRPA;;Inactivo;
+NULL;ProgramadorCitas- Ginecologia;0.0916666666666667;Transacciones;Uipath;17/03/2022;Inactivo;Esneyder Gomez Marin
+NULL;Aseguramiento venta empresarial;0.166666666666667;Transacciones;Uipath;23/05/2022;Activo;Esneyder Gomez Marin
+NULL;Sincronizacion Novedades Nomina Instructores;0.283333333333333;Ejecuciones;Uipath;01/06/2021;Inactivo;Camilo Guzman Velasquez
+NULL;RIPS Entes;9.5;Ejecuciones;Uipath;03/11/2020;Activo;Esneyder Gomez Marin
+NULL;Aportes Novedades PILA R2;1.317;Ejecuciones;Uipath;26/11/2021;Inactivo;Yennifer Vanessa Serna Carvajal
+NULL;Asistente Cubo;4;Ejecuciones;IRPA;;Inactivo;
+NULL;Parametricas Uno;0.06;Transacciones;Uipath;09/05/2022;Inactivo;Esneyder Gomez Marin
+NULL;ContingenciaPlanNacional;0.016;Transacciones;Uipath;11/11/2021;Inactivo;Esneyder Gomez Marin
+NULL;Aportes Fuera de Pila;0.05;Transacciones;Uipath;07/05/2021;Activo;Yennifer Vanessa Serna Carvajal
+NULL;Generador informe;6;Ejecuciones;Uipath;05/09/2022;Inactivo;
+NULL;RPA_GastosViajes;;Transacciones;Uipath;;Activo;Camilo Guzman Velasquez
+NULL;RPA_AfiliacionesTrabajadores;3;Ejecuciones;Power Automate;25/07/2024;Inactivo;Esneyder Gomez Marin
+NULL;RPACambioEstrategia;0.05;Transacciones;Uipath;07/11/2022;Inactivo;Esneyder Gomez Marin
+NULL;Pagos Facturacion y Libranza;0.05;Transacciones;Uipath;09/03/2023;Activo;Yennifer Vanessa Serna Carvajal
+NULL;FlujoDeLiberaciones_V3;0;Ejecuciones;Power Automate;16/09/2024;Activo;Esneyder Gomez Marin
+NULL;RPA Actualizacion Moneda;0.25;Ejecuciones;UiPath;05/09/2023;Activo;Camilo Guzman Velasquez
+NULL;RPAInformeUIAF;0.5;Ejecuciones;Uipath;04/12/2022;Activo;Esneyder Gomez Marin
+NULL;Contabilización facturas proveedores;0;Transacciones;Uipath;;Activo;
+NULL;Aplicacion pagos creditos;0.285;Transacciones;Uipath;15/07/2023;Activo;Yennifer Vanessa Serna Carvajal
+NULL;RPA_Eventtia;6;Ejecuciones;Python;01/04/2023;Activo;Esneyder Gomez Marin
+NULL;Correcciones vacunacion;0.01;Transacciones;Uipath;01/06/2022;Inactivo;Esneyder Gomez Marin
+NULL;Vacunacion tradicional Extraccion de información vacunet;0.61;Ejecuciones;Uipath;19/06/2023;Inactivo;Esneyder Gomez Marin
+NULL;Performer_Certificados_Escolaridad;1;Transacciones;Python;;Activo;Yennifer Vanessa Serna Carvajal
+NULL;Servicios en linea;0.0607515;Transacciones;Power Automate;08/05/2023;Activo;Esneyder Gomez Marin
+NULL;Tawk To;8.33;Ejecuciones;Uipath;09/06/2022;Inactivo;Esneyder Gomez Marin
+NULL;RIPS Covid;1.83333333333333;Ejecuciones;Uipath;03/11/2020;Activo;Esneyder Gomez Marin
+NULL;Vacunacion tradicional APIS;0.15;Transacciones;Uipath;12/10/2020;Inactivo;Esneyder Gomez Marin
+NULL;RPASubvencionesExtractor;0.16;Ejecuciones;Uipath;03/05/2023;Activo;Camilo Guzman Velasquez
