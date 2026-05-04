@@ -216,3 +216,24 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# --- Complementos para el Proyecto EDA & UV ---
+
+# Bases de datos SQLite (Específicas de tu estructura)
+# Ignoramos todos los .db para evitar subir datos de procesos reales
+data/database/*.db
+*.db
+*.db-journal
+*.db-wal
+
+# Reportes y Salidas de Visualización
+# No subimos las imágenes generadas, ya que se crean al correr el script
+data/database/Reports/
+Reports/
+
+# Configuración de UV
+# Mantenemos uv.lock fuera del ignore (comentado) para asegurar reproducibilidad
+# uv.lock 
+
+# Entornos de desarrollo locales
+.python-version
