@@ -1,0 +1,12 @@
+﻿columna,tipo_dato,nulos,porcentaje_nulos,valores_unicos
+Duracion_Ejecucion,str,561703,90.7619470813977,9120
+TipoEjecucion,str,4574,0.7390830135326196,2
+Area,str,4490,0.725509997980206,24
+ErroresNegocio,float64,1217,0.19664714199151687,634
+Exitosas,float64,1172,0.1893758836598667,1058
+Hora_Ejecucion,str,952,0.15382750959402142,121438
+Fecha_ejecucion,str,114,0.018420521106847103,1611
+Numero_Transacciones,int64,0,0.0,1702
+Automatizacion,str,0,0.0,84
+Celula,str,0,0.0,8
+IdProceso,int64,0,0.0,618875
