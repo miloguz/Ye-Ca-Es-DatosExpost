@@ -231,3 +231,57 @@ Reports/
 
 # Entornos de desarrollo locales
 .python-version
+
+# ============================================================
+# Proyecto Especialización - EDA Procesos RPA
+# ============================================================
+
+# Entorno virtual
+.venv/
+venv/
+env/
+
+# Variables de entorno y secretos
+.env
+.env.*
+!.env.example
+
+# Jupyter
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/
+
+# Cachés de Python y herramientas
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Salidas generadas por análisis
+Data/output/
+Data/outputs/
+outputs/
+salidas/
+Reports/
+data/database/Reports/
+
+# Archivos temporales
+*.tmp
+*.temp
+*.bak
+*.log
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Modelos o artefactos pesados generados
+*.pkl
+*.joblib
+*.h5
+*.onnx
+
+# Archivos de Excel temporales
+~$*.xlsx
+~$*.xls
