@@ -251,18 +251,44 @@ st.markdown("""<style>
   [data-testid="stInfo"] { border-left: 4px solid var(--cfm-primary) !important; }
   [data-testid="stSuccess"] { border-left: 4px solid #2ea84b !important; }
 
-  /* ── Selectbox / inputs ── */
-  [data-testid="stSelectbox"] > div > div {
+  /* ── Inputs y selectboxes en area principal (fondo blanco, texto navy) ── */
+  /* base-input es el contenedor real con fondo — debe ser blanco fuera del sidebar */
+  [data-testid="stMainBlockContainer"] [data-baseweb="base-input"],
+  [data-testid="stMainBlockContainer"] [data-baseweb="base-input"] input,
+  [data-testid="stMainBlockContainer"] div[data-baseweb="select"] > div,
+  [data-testid="stMainBlockContainer"] div[data-baseweb="select"] > div input {
+    background-color: #ffffff !important;
+    color: var(--cfm-navy) !important;
+  }
+  /* Bordes */
+  [data-testid="stMainBlockContainer"] [data-baseweb="base-input"] {
     border-color: var(--cfm-border) !important;
     border-radius: 8px !important;
   }
-  [data-testid="stNumberInput"] input {
+  [data-testid="stMainBlockContainer"] div[data-baseweb="select"] > div {
     border-color: var(--cfm-border) !important;
     border-radius: 8px !important;
   }
-  [data-testid="stNumberInput"] input:focus,
-  [data-testid="stSelectbox"] > div > div:focus-within {
+  /* Focus */
+  [data-testid="stMainBlockContainer"] [data-baseweb="base-input"]:focus-within {
     border-color: var(--cfm-primary) !important;
+    box-shadow: 0 0 0 2px var(--cfm-primary-bg) !important;
+  }
+  /* Labels de inputs */
+  .stApp > section:not([data-testid="stSidebar"]) [data-testid="stWidgetLabel"],
+  .stApp > section:not([data-testid="stSidebar"]) .stNumberInput label,
+  .stApp > section:not([data-testid="stSidebar"]) .stSelectbox label,
+  .stApp > section:not([data-testid="stSidebar"]) .stSlider label {
+    color: var(--cfm-primary) !important;
+    font-weight: 500 !important;
+  }
+  /* Texto dentro del selectbox desplegado */
+  [data-baseweb="popover"] ul li {
+    background-color: #ffffff !important;
+    color: var(--cfm-navy) !important;
+  }
+  [data-baseweb="popover"] ul li:hover {
+    background-color: var(--cfm-primary-bg) !important;
   }
   .stSpinner > div { border-top-color: var(--cfm-primary) !important; }
 
