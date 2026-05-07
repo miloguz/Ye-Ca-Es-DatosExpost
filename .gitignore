@@ -285,3 +285,24 @@ desktop.ini
 # Archivos de Excel temporales
 ~$*.xlsx
 ~$*.xls
+
+# ============================================================
+# Agente SQL + Modelo ROI (agregado en v0.2.0)
+# ============================================================
+
+# Modelos entrenados (artefactos binarios generados localmente)
+models/*
+!models/.gitkeep
+
+# Dataset de ROI generado por los notebooks
+data/roi_dataset.csv
+
+# Figuras generadas por los notebooks
+reports/figures/*
+!reports/figures/.gitkeep
+
+# Streamlit — solo ignorar secretos, no la configuracion
+.streamlit/secrets.toml
+
+# Ollama — cache local de modelos (nunca subir, son varios GB)
+.ollama/

@@ -1,14 +1,23 @@
 [project]
 name = "proyecto1especializacion"
-version = "0.1.0"
-description = "Add your description here"
+version = "0.2.0"
+description = "Análisis de procesos RPA con agente SQL local y predicción de ROI"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.11"
 dependencies = [
-    "ipykernel>=7.2.0",
-    "matplotlib>=3.10.9",
-    "numpy>=2.4.4",
-    "pandas>=3.0.2",
-    "scikit-learn>=1.8.0",
-    "seaborn>=0.13.2",
+    "ipykernel>=6.29.0",
+    "matplotlib>=3.8.0",
+    "numpy>=1.26.0",
+    "pandas>=2.2.0",
+    "scikit-learn>=1.4.0",
+    "seaborn>=0.13.0",
+    "streamlit>=1.40.0",
+    "ollama>=0.4.0",
+    "plotly>=5.24.0",
+    "xgboost>=2.1.0",
+    "joblib>=1.4.0",
+    "nbformat>=5.10.0",
 ]
+
+[project.scripts]
+app = "app.chat:main"
