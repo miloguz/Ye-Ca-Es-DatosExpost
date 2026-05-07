@@ -58,19 +58,31 @@ st.markdown("""<style>
   /* ── Fondo general (secondaryBackgroundColor es navy en config.toml,
         se restaura a light en todos los contextos fuera del sidebar) ── */
   .stApp { background-color: var(--cfm-white); }
-  .stApp > section:not([data-testid="stSidebar"]),
+  /* Restaura fondo blanco en área principal (secondaryBg = navy por el sidebar) */
   [data-testid="stMainBlockContainer"],
-  [data-testid="stVerticalBlock"],
-  [data-testid="stExpander"],
-  [data-testid="stMetric"],
-  .stCodeBlock,
-  [data-testid="stForm"],
-  [data-testid="stNumberInput"] > div,
-  [data-testid="stTextInput"] > div {
+  .stApp > section:not([data-testid="stSidebar"]) [data-testid="stVerticalBlock"],
+  .stApp > section:not([data-testid="stSidebar"]) [data-testid="stMarkdownContainer"],
+  .stApp > section:not([data-testid="stSidebar"]) .stCodeBlock,
+  .stApp > section:not([data-testid="stSidebar"]) [data-testid="stForm"],
+  .stApp > section:not([data-testid="stSidebar"]) [data-testid="stNumberInput"] > div,
+  .stApp > section:not([data-testid="stSidebar"]) [data-testid="stTextInput"] > div {
     background-color: var(--cfm-white) !important;
   }
+  /* El sidebar y sus hijos nunca deben recibir fondo blanco */
+  html body .stApp [data-testid="stSidebar"] [data-testid="stVerticalBlock"],
+  html body .stApp [data-testid="stSidebar"] [data-testid="stMarkdownContainer"],
+  html body .stApp [data-testid="stSidebar"] [data-testid="stCaptionContainer"],
+  html body .stApp [data-testid="stSidebar"] .stMarkdown {
+    background-color: transparent !important;
+  }
   [data-testid="stExpander"] { background-color: var(--cfm-tertiary-bg) !important; }
-  [data-testid="stMetric"]   { background-color: var(--cfm-tertiary-bg) !important; }
+  /* Métricas fuera del sidebar: fondo suave con acento rosa */
+  .stApp > section:not([data-testid="stSidebar"]) [data-testid="stMetric"] {
+    background-color: var(--cfm-tertiary-bg) !important;
+    border-left: 4px solid var(--cfm-primary) !important;
+    border-radius: 10px !important;
+    padding: 0.75rem !important;
+  }
 
   /* ── Header superior ── */
   header[data-testid="stHeader"] {
@@ -103,9 +115,17 @@ st.markdown("""<style>
   html body .stApp [data-testid="stSidebar"] hr {
     border-color: #3c3f52 !important;
   }
-  html body .stApp [data-testid="stSidebar"] .stSelectbox label,
-  html body .stApp [data-testid="stSidebar"] .stSelectbox div {
+  /* Selectbox sidebar — contenedor base-web */
+  html body .stApp [data-testid="stSidebar"] div[data-baseweb="select"] > div,
+  html body .stApp [data-testid="stSidebar"] div[data-baseweb="select"] {
+    background-color: #3c3f52 !important;
+    border-color: #6f7287 !important;
     color: #ffffff !important;
+  }
+  html body .stApp [data-testid="stSidebar"] div[data-baseweb="select"] span,
+  html body .stApp [data-testid="stSidebar"] div[data-baseweb="select"] svg {
+    color: #ffffff !important;
+    fill: #ffffff !important;
   }
   html body .stApp [data-testid="stSidebar"] select,
   html body .stApp [data-testid="stSidebar"] input {
@@ -160,12 +180,25 @@ st.markdown("""<style>
   [data-testid="stChatMessage"][data-testid*="assistant"] {
     background-color: var(--cfm-tertiary-bg) !important;
   }
-  [data-testid="stChatInput"] textarea {
+  /* El chat input debe ser blanco (secondaryBg es navy por el sidebar) */
+  [data-testid="stChatInputContainer"],
+  [data-testid="stChatInputContainer"] > div,
+  [data-testid="stBottom"] > div,
+  [data-testid="stBottom"] {
+    background-color: #ffffff !important;
+  }
+  [data-testid="stChatInput"] > div {
+    background-color: #ffffff !important;
     border: 2px solid var(--cfm-border) !important;
     border-radius: 12px !important;
+  }
+  [data-testid="stChatInput"] textarea {
+    background-color: #ffffff !important;
+    color: var(--cfm-navy) !important;
+    border: none !important;
     font-family: 'Roboto', sans-serif !important;
   }
-  [data-testid="stChatInput"] textarea:focus {
+  [data-testid="stChatInput"] > div:focus-within {
     border-color: var(--cfm-primary) !important;
     box-shadow: 0 0 0 2px var(--cfm-primary-bg) !important;
   }
@@ -236,13 +269,18 @@ st.markdown("""<style>
   /* ── Divisor ── */
   hr { border-color: var(--cfm-border) !important; }
 
+  /* ── Métricas dentro del sidebar — fondo oscuro ── */
+  html body .stApp [data-testid="stSidebar"] [data-testid="stMetric"] {
+    background-color: #2a2e42 !important;
+    border-left: 3px solid #db0061 !important;
+    border-radius: 8px !important;
+    padding: 0.35rem 0.5rem !important;
+  }
+
   /* ── Compactar padding interno del sidebar ── */
   [data-testid="stSidebarContent"] > div {
     padding-top: 0.5rem !important;
     padding-bottom: 0.5rem !important;
-  }
-  [data-testid="stSidebar"] [data-testid="stMetric"] {
-    padding: 0.4rem 0.5rem !important;
   }
   [data-testid="stSidebar"] [data-testid="stVerticalBlock"] > div {
     gap: 0.25rem !important;
