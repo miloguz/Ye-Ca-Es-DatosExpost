@@ -20,16 +20,240 @@ from src.utils.roi_calculator import build_roi_dataset, get_roi_summary
 
 # ── Configuración de página ───────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Agente RPA",
-    page_icon="🤖",
+    page_title="Comfama · Agente RPA",
+    page_icon="https://www.comfama.com/favicon.ico",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
+# ── Tema Comfama ──────────────────────────────────────────────────────────────
+st.markdown("""
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ── Variables de marca Comfama ── */
+  :root {
+    --cfm-primary:        #db0061;
+    --cfm-primary-light:  #f15894;
+    --cfm-primary-dark:   #8a0051;
+    --cfm-primary-bg:     #fce3ed;
+    --cfm-navy:           #1b1f30;
+    --cfm-navy-mid:       #3c3f52;
+    --cfm-navy-light:     #6f7287;
+    --cfm-tertiary-bg:    #f6f8ff;
+    --cfm-gray-light:     #f3f3f3;
+    --cfm-border:         #e9ebff;
+    --cfm-green-accent:   #c8f5c8;
+    --cfm-yellow-accent:  #f0ea14;
+    --cfm-white:          #ffffff;
+  }
+
+  /* ── Tipografía global ── */
+  html, body, [class*="css"], .stMarkdown, .stText, button, input, select {
+    font-family: 'Roboto', sans-serif !important;
+  }
+
+  /* ── Fondo general (secondaryBackgroundColor es navy en config.toml,
+        se restaura a light en todos los contextos fuera del sidebar) ── */
+  .stApp { background-color: var(--cfm-white); }
+  .stApp > section:not([data-testid="stSidebar"]),
+  [data-testid="stMainBlockContainer"],
+  [data-testid="stVerticalBlock"],
+  [data-testid="stExpander"],
+  [data-testid="stMetric"],
+  .stCodeBlock,
+  [data-testid="stForm"],
+  [data-testid="stNumberInput"] > div,
+  [data-testid="stTextInput"] > div {
+    background-color: var(--cfm-white) !important;
+  }
+  [data-testid="stExpander"] { background-color: var(--cfm-tertiary-bg) !important; }
+  [data-testid="stMetric"]   { background-color: var(--cfm-tertiary-bg) !important; }
+
+  /* ── Header superior ── */
+  header[data-testid="stHeader"] {
+    background-color: var(--cfm-white);
+    border-bottom: 3px solid var(--cfm-primary);
+  }
+
+  /* ── Sidebar ── */
+  html body .stApp section[data-testid="stSidebar"],
+  html body .stApp section[data-testid="stSidebar"] > div {
+    background-color: #1b1f30 !important;
+    border-right: 3px solid #db0061;
+  }
+  html body .stApp section[data-testid="stSidebar"] *,
+  html body .stApp [data-testid="stSidebarContent"] * {
+    color: #ffffff !important;
+  }
+  html body .stApp [data-testid="stSidebar"] .stMarkdown h1,
+  html body .stApp [data-testid="stSidebar"] .stMarkdown h2,
+  html body .stApp [data-testid="stSidebar"] .stMarkdown h3 {
+    color: #f15894 !important;
+  }
+  html body .stApp [data-testid="stSidebar"] [data-testid="stMetricLabel"] {
+    color: #ffffff !important;
+  }
+  html body .stApp [data-testid="stSidebar"] [data-testid="stMetricValue"] {
+    color: #f15894 !important;
+    font-weight: 700 !important;
+  }
+  html body .stApp [data-testid="stSidebar"] hr {
+    border-color: #3c3f52 !important;
+  }
+  html body .stApp [data-testid="stSidebar"] .stSelectbox label,
+  html body .stApp [data-testid="stSidebar"] .stSelectbox div {
+    color: #ffffff !important;
+  }
+  html body .stApp [data-testid="stSidebar"] select,
+  html body .stApp [data-testid="stSidebar"] input {
+    background-color: #3c3f52 !important;
+    color: #ffffff !important;
+    border-color: #6f7287 !important;
+  }
+
+  /* ── Botones primarios ── */
+  .stButton > button {
+    background-color: var(--cfm-primary) !important;
+    color: var(--cfm-white) !important;
+    border: none !important;
+    border-radius: 999px !important;
+    font-family: 'Roboto', sans-serif !important;
+    font-weight: 600 !important;
+    padding: 0.5rem 1.5rem !important;
+    transition: background-color 0.2s ease !important;
+  }
+  .stButton > button:hover {
+    background-color: var(--cfm-primary-dark) !important;
+  }
+
+  /* ── Pestañas ── */
+  [data-testid="stTabs"] [role="tablist"] {
+    border-bottom: 2px solid var(--cfm-border);
+    gap: 0.5rem;
+  }
+  [data-testid="stTabs"] [role="tab"] {
+    font-family: 'Roboto', sans-serif !important;
+    font-weight: 500 !important;
+    color: var(--cfm-navy-light) !important;
+    border-radius: 8px 8px 0 0 !important;
+    padding: 0.5rem 1.25rem !important;
+    border: none !important;
+    background: transparent !important;
+  }
+  [data-testid="stTabs"] [role="tab"][aria-selected="true"] {
+    color: var(--cfm-primary) !important;
+    border-bottom: 3px solid var(--cfm-primary) !important;
+    font-weight: 700 !important;
+  }
+
+  /* ── Chat ── */
+  [data-testid="stChatMessage"] {
+    border-radius: 12px !important;
+    margin-bottom: 0.75rem !important;
+  }
+  [data-testid="stChatMessage"][data-testid*="user"] {
+    background-color: var(--cfm-primary-bg) !important;
+  }
+  [data-testid="stChatMessage"][data-testid*="assistant"] {
+    background-color: var(--cfm-tertiary-bg) !important;
+  }
+  [data-testid="stChatInput"] textarea {
+    border: 2px solid var(--cfm-border) !important;
+    border-radius: 12px !important;
+    font-family: 'Roboto', sans-serif !important;
+  }
+  [data-testid="stChatInput"] textarea:focus {
+    border-color: var(--cfm-primary) !important;
+    box-shadow: 0 0 0 2px var(--cfm-primary-bg) !important;
+  }
+
+  /* ── Expanders (Ver SQL) ── */
+  [data-testid="stExpander"] {
+    border: 1px solid var(--cfm-border) !important;
+    border-radius: 8px !important;
+    background-color: var(--cfm-tertiary-bg) !important;
+  }
+  [data-testid="stExpander"] summary {
+    color: var(--cfm-navy-mid) !important;
+    font-weight: 500 !important;
+  }
+
+  /* ── Métricas ── */
+  [data-testid="stMetric"] {
+    background-color: var(--cfm-tertiary-bg);
+    border-radius: 10px;
+    padding: 0.75rem;
+    border-left: 4px solid var(--cfm-primary);
+  }
+  [data-testid="stMetricValue"] {
+    color: var(--cfm-primary) !important;
+    font-weight: 700 !important;
+  }
+
+  /* ── Headings ── */
+  h1, h2, h3 {
+    font-family: 'Roboto', sans-serif !important;
+    color: var(--cfm-navy) !important;
+    font-weight: 700 !important;
+  }
+  h1 { border-bottom: 3px solid var(--cfm-primary); padding-bottom: 0.5rem; }
+
+  /* ── Tablas ── */
+  [data-testid="stDataFrame"] thead tr th {
+    background-color: var(--cfm-navy) !important;
+    color: var(--cfm-white) !important;
+    font-weight: 600 !important;
+  }
+  [data-testid="stDataFrame"] tbody tr:nth-child(even) {
+    background-color: var(--cfm-tertiary-bg) !important;
+  }
+  [data-testid="stDataFrame"] tbody tr:hover {
+    background-color: var(--cfm-primary-bg) !important;
+  }
+
+  /* ── Info / Warning / Error ── */
+  [data-testid="stInfo"] { border-left: 4px solid var(--cfm-primary) !important; }
+  [data-testid="stSuccess"] { border-left: 4px solid #2ea84b !important; }
+
+  /* ── Selectbox / inputs ── */
+  [data-testid="stSelectbox"] > div > div {
+    border-color: var(--cfm-border) !important;
+    border-radius: 8px !important;
+  }
+  [data-testid="stNumberInput"] input {
+    border-color: var(--cfm-border) !important;
+    border-radius: 8px !important;
+  }
+  [data-testid="stNumberInput"] input:focus,
+  [data-testid="stSelectbox"] > div > div:focus-within {
+    border-color: var(--cfm-primary) !important;
+  }
+  .stSpinner > div { border-top-color: var(--cfm-primary) !important; }
+
+  /* ── Divisor ── */
+  hr { border-color: var(--cfm-border) !important; }
+</style>
+""", unsafe_allow_html=True)
+
+# ── Header con logo Comfama ───────────────────────────────────────────────────
+st.markdown("""
+<div style="display:flex; align-items:center; gap:1rem; padding:0.5rem 0 1.5rem 0; border-bottom:3px solid #db0061; margin-bottom:1.5rem;">
+  <img src="https://www.comfama.com/favicon.ico" width="36" style="border-radius:6px;" onerror="this.style.display='none'">
+  <div>
+    <span style="font-family:'Roboto',sans-serif; font-size:1.5rem; font-weight:700; color:#db0061;">comfama</span>
+    <span style="font-family:'Roboto',sans-serif; font-size:1rem; font-weight:400; color:#6f7287; margin-left:0.75rem;">· Agente SQL — Procesos RPA</span>
+  </div>
+</div>
+""", unsafe_allow_html=True)
+
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.title("🤖 Agente SQL · RPA")
-    st.caption("Powered by Ollama · 100% local")
+    st.markdown("""
+    <div style="padding:1rem 0 0.5rem 0; text-align:center;">
+      <span style="font-size:1.6rem; font-weight:700; color:#f15894; font-family:'Roboto',sans-serif; letter-spacing:-0.5px;">comfama</span><br>
+      <span style="font-size:0.75rem; color:#b7bad1; font-family:'Roboto',sans-serif;">Agente SQL · Procesos RPA</span>
+    </div>
+    """, unsafe_allow_html=True)
     st.divider()
 
     # Selector de modelo
