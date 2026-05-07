@@ -274,6 +274,30 @@ st.markdown("""<style>
     border-color: var(--cfm-primary) !important;
     box-shadow: 0 0 0 2px var(--cfm-primary-bg) !important;
   }
+
+  /* ── Botones stepper (+/-) de number_input ── */
+  [data-testid="stNumberInputStepDown"],
+  [data-testid="stNumberInputStepUp"],
+  [data-testid="stMainBlockContainer"] [data-testid="stNumberInput"] button,
+  [data-testid="stMainBlockContainer"] [data-baseweb="input-wrapper"] button {
+    background-color: var(--cfm-tertiary-bg) !important;
+    color: var(--cfm-navy) !important;
+    border: none !important;
+    border-left: 1px solid var(--cfm-border) !important;
+    border-radius: 0 8px 8px 0 !important;
+  }
+  [data-testid="stNumberInputStepDown"]:hover,
+  [data-testid="stNumberInputStepUp"]:hover,
+  [data-testid="stMainBlockContainer"] [data-testid="stNumberInput"] button:hover {
+    background-color: var(--cfm-primary-bg) !important;
+    color: var(--cfm-primary) !important;
+  }
+  [data-testid="stNumberInputStepDown"] svg,
+  [data-testid="stNumberInputStepUp"] svg,
+  [data-testid="stMainBlockContainer"] [data-testid="stNumberInput"] button svg {
+    fill: var(--cfm-navy) !important;
+    stroke: var(--cfm-navy) !important;
+  }
   /* Labels de inputs */
   .stApp > section:not([data-testid="stSidebar"]) [data-testid="stWidgetLabel"],
   .stApp > section:not([data-testid="stSidebar"]) .stNumberInput label,
