@@ -27,9 +27,12 @@ st.set_page_config(
 )
 
 # ── Tema Comfama ──────────────────────────────────────────────────────────────
-st.markdown("""
-<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<style>
+st.markdown(
+    '<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">',
+    unsafe_allow_html=True,
+)
+
+st.markdown("""<style>
   /* ── Variables de marca Comfama ── */
   :root {
     --cfm-primary:        #db0061;
@@ -232,6 +235,18 @@ st.markdown("""
 
   /* ── Divisor ── */
   hr { border-color: var(--cfm-border) !important; }
+
+  /* ── Compactar padding interno del sidebar ── */
+  [data-testid="stSidebarContent"] > div {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+  }
+  [data-testid="stSidebar"] [data-testid="stMetric"] {
+    padding: 0.4rem 0.5rem !important;
+  }
+  [data-testid="stSidebar"] [data-testid="stVerticalBlock"] > div {
+    gap: 0.25rem !important;
+  }
 </style>
 """, unsafe_allow_html=True)
 
@@ -249,15 +264,14 @@ st.markdown("""
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("""
-    <div style="padding:1rem 0 0.5rem 0; text-align:center;">
-      <span style="font-size:1.6rem; font-weight:700; color:#f15894; font-family:'Roboto',sans-serif; letter-spacing:-0.5px;">comfama</span><br>
-      <span style="font-size:0.75rem; color:#b7bad1; font-family:'Roboto',sans-serif;">Agente SQL · Procesos RPA</span>
+    <div style="padding:0.5rem 0 0.25rem 0; text-align:center;">
+      <span style="font-size:1.5rem; font-weight:700; color:#f15894; font-family:'Roboto',sans-serif; letter-spacing:-0.5px;">comfama</span><br>
+      <span style="font-size:0.7rem; color:#b7bad1; font-family:'Roboto',sans-serif;">Agente SQL · Procesos RPA</span>
     </div>
     """, unsafe_allow_html=True)
-    st.divider()
 
     # Selector de modelo
-    st.subheader("Modelo")
+    st.markdown('<p style="margin:0.4rem 0 0.1rem; font-size:0.75rem; color:#b7bad1; font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">Modelo</p>', unsafe_allow_html=True)
     available = list_available_models()
     if available:
         model_options = available
@@ -266,21 +280,17 @@ with st.sidebar:
             if DEFAULT_MODEL in model_options
             else 0
         )
-        selected_model = st.selectbox("Modelo Ollama", model_options, index=default_idx)
+        selected_model = st.selectbox("Modelo Ollama", model_options, index=default_idx, label_visibility="collapsed")
     else:
         st.warning(
-            "Ollama no está corriendo o no hay modelos descargados.\n\n"
-            "**Pasos:**\n"
-            "1. Instala Ollama: https://ollama.com\n"
-            "2. `ollama pull qwen2.5-coder:7b`\n"
-            "3. `ollama serve`"
+            "Ollama no está corriendo.\n"
+            "1. https://ollama.com\n"
+            "2. `ollama pull qwen2.5-coder:7b`"
         )
         selected_model = DEFAULT_MODEL
 
-    st.divider()
-
     # Estadísticas de la BD
-    st.subheader("Base de datos")
+    st.markdown('<p style="margin:0.6rem 0 0.1rem; font-size:0.75rem; color:#b7bad1; font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">Base de datos</p>', unsafe_allow_html=True)
     try:
         stats = get_db_stats()
         col1, col2 = st.columns(2)
@@ -290,10 +300,8 @@ with st.sidebar:
     except Exception as e:
         st.error(f"Error cargando stats: {e}")
 
-    st.divider()
-
     # Resumen ROI
-    st.subheader("Resumen ROI")
+    st.markdown('<p style="margin:0.6rem 0 0.25rem; font-size:0.75rem; color:#b7bad1; font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">Resumen ROI</p>', unsafe_allow_html=True)
     if st.button("Calcular ROI", use_container_width=True):
         with st.spinner("Calculando..."):
             try:
@@ -307,13 +315,12 @@ with st.sidebar:
     if "roi_summary" in st.session_state:
         s = st.session_state["roi_summary"]
         ahorro_m = s["ahorro_total_cop"] / 1_000_000
-        st.metric("Ahorro total", f"${ahorro_m:,.1f}M COP")
-        st.metric("ROI promedio", f"{s['roi_promedio_pct']:.0f}%")
-        st.metric("Tiempo ahorrado", f"{s['tiempo_ahorrado_horas']:,.0f} h")
-        st.caption(f"Mejor bot: **{s['mejor_bot']}**")
+        col1, col2 = st.columns(2)
+        col1.metric("Ahorro", f"${ahorro_m:,.0f}M")
+        col2.metric("ROI prom.", f"{s['roi_promedio_pct']:.0f}%")
+        st.caption(f"Top: **{s['mejor_bot']}**")
 
-    st.divider()
-
+    st.markdown('<div style="margin-top:0.5rem;"></div>', unsafe_allow_html=True)
     if st.button("Limpiar conversación", use_container_width=True):
         st.session_state["messages"] = []
         st.rerun()
