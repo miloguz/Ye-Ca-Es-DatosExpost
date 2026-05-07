@@ -5,8 +5,9 @@ Objetivo: dado un conjunto de características de un nuevo bot (tecnología,
 tiempo manual estimado, volumen esperado de ejecuciones, valor hora del rol),
 predecir el ROI en porcentaje y el ahorro neto en COP.
 
-Algoritmo: GradientBoostingRegressor (scikit-learn).
-Con 32 GB RAM y RTX 4060, el entrenamiento es inmediato incluso con 500+ features.
+Algoritmo: XGBoostRegressor con aceleración GPU (RTX 4060 / CUDA).
+Usa transformación log1p(ROI) para manejar la distribución sesgada del target.
+Detecta automáticamente si hay GPU disponible y hace fallback a CPU.
 """
 
 from pathlib import Path
@@ -15,12 +16,12 @@ import joblib
 import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
-from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
-from sklearn.linear_model import Ridge
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import cross_val_score, train_test_split
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import FunctionTransformer, OneHotEncoder, StandardScaler
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+
+import xgboost as xgb
 
 MODEL_DIR = Path(__file__).parent.parent.parent / "models"
 MODEL_PATH = MODEL_DIR / "roi_model.joblib"
@@ -42,7 +43,17 @@ NUMERIC_FEATURES = [
 TARGET = "ROI_Porcentaje"
 
 
-def _build_pipeline(model_type: str = "gbm") -> Pipeline:
+def _detect_device() -> str:
+    """Detecta si XGBoost puede usar GPU CUDA, retorna 'cuda' o 'cpu'."""
+    try:
+        test = xgb.XGBRegressor(device="cuda", n_estimators=1, verbosity=0)
+        test.fit([[0, 0]], [0])
+        return "cuda"
+    except Exception:
+        return "cpu"
+
+
+def _build_pipeline(device: str = "cpu") -> Pipeline:
     preprocessor = ColumnTransformer(
         transformers=[
             ("num", StandardScaler(), NUMERIC_FEATURES),
@@ -53,21 +64,20 @@ def _build_pipeline(model_type: str = "gbm") -> Pipeline:
             ),
         ]
     )
-    if model_type == "gbm":
-        # Parámetros conservadores para datasets pequeños (<100 muestras)
-        estimator = GradientBoostingRegressor(
-            n_estimators=100,
-            learning_rate=0.1,
-            max_depth=2,
-            subsample=0.8,
-            min_samples_leaf=3,
-            random_state=42,
-        )
-    else:
-        estimator = RandomForestRegressor(
-            n_estimators=100, max_depth=4, min_samples_leaf=3, random_state=42, n_jobs=-1
-        )
-
+    estimator = xgb.XGBRegressor(
+        n_estimators=300,
+        learning_rate=0.05,
+        max_depth=3,
+        subsample=0.8,
+        colsample_bytree=0.8,
+        reg_alpha=0.1,
+        reg_lambda=1.0,
+        min_child_weight=3,
+        random_state=42,
+        device=device,
+        tree_method="hist",   # requerido para GPU en XGBoost 2.x
+        verbosity=0,
+    )
     return Pipeline([("preprocessor", preprocessor), ("model", estimator)])
 
 
@@ -93,18 +103,21 @@ def train(df: pd.DataFrame) -> dict:
     """
     Entrena el modelo con el DataFrame de ROI calculado.
 
+    Usa XGBoost con GPU si hay CUDA disponible (RTX 4060 recomendado).
     El target usa transformación log1p(ROI) para manejar la distribución
     sesgada (ROI tiene outliers extremos de hasta 500,000%).
     Retorna métricas en escala original y guarda el pipeline en disco.
     """
     MODEL_DIR.mkdir(exist_ok=True)
 
+    device = _detect_device()
+
     df_clean = df.dropna(subset=[TARGET] + ["TiempoManualHoras", "ValorHoraPromedio"])
-    df_pos = df_clean[df_clean[TARGET] > 0]  # Log requiere valores positivos
+    df_pos = df_clean[df_clean[TARGET] > 0]  # log requiere valores positivos
 
     X = prepare_features(df_pos)
     y_raw = df_pos[TARGET]
-    y_log = np.log1p(y_raw)  # log-transform para estabilizar varianza
+    y_log = np.log1p(y_raw)
 
     n_cv = min(5, max(2, len(X) // 8))
     test_size = 0.2 if len(X) >= 30 else 0.15
@@ -114,7 +127,7 @@ def train(df: pd.DataFrame) -> dict:
     )
     y_test_raw = np.expm1(y_test_log)
 
-    pipeline = _build_pipeline("gbm")
+    pipeline = _build_pipeline(device)
     pipeline.fit(X_train, y_train_log)
 
     y_pred_log = pipeline.predict(X_test)
@@ -130,11 +143,11 @@ def train(df: pd.DataFrame) -> dict:
         "cv_r2_std": cv_scores.std(),
         "n_train": len(X_train),
         "n_test": len(X_test),
-        "note": "Modelo entrenado en escala log(ROI). R² en escala log, MAE/RMSE en escala original.",
+        "device": device,
+        "note": "XGBoost entrenado en escala log(ROI). R2 en escala log, MAE/RMSE en escala original.",
     }
 
-    # Guardamos pipeline + transformación como tupla
-    joblib.dump({"pipeline": pipeline, "log_transform": True}, MODEL_PATH)
+    joblib.dump({"pipeline": pipeline, "log_transform": True, "device": device}, MODEL_PATH)
     return metrics
 
 
@@ -198,6 +211,7 @@ def predict(features: dict) -> dict:
         "ahorro_neto_cop": ahorro,
         "beneficio_bruto_cop": beneficio,
         "costo_robot_cop": costo,
+        "device_usado": artifact.get("device", "cpu"),
     }
 
 

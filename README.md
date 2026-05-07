@@ -206,12 +206,14 @@ Ahorro_Neto     = Beneficio_Bruto - Costo_Robot
 ROI%            = (Ahorro_Neto / Costo_Robot) x 100
 ```
 
-**Modelo predictivo:** GradientBoostingRegressor con transformacion `log1p(ROI)` para manejar la distribucion sesgada del target.
+**Modelo predictivo:** XGBoostRegressor con aceleracion GPU (CUDA) y transformacion `log1p(ROI)` para manejar la distribucion sesgada del target. Detecta automaticamente GPU NVIDIA y hace fallback a CPU.
 
 | Metrica | Valor |
 |---|---|
+| Algoritmo | XGBoost 2.x (`tree_method=hist`, `device=cuda`) |
 | R2 (escala log, CV 5-fold) | ~0.41 |
 | Top features | TiempoManualHoras, TasaExito, DuracionPromedio, ValorHora |
+| GPU requerida | RTX 4060 (8 GB VRAM) recomendada, fallback a CPU automatico |
 | Muestras de entrenamiento | ~33 bots con datos completos |
 
 > El modelo mejora a medida que se completen los datos de `TiemposManuales` para mas bots.
