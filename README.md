@@ -1,7 +1,7 @@
 # Proyecto 1 — Especialización en Ciencia de Datos e IA
-## Análisis de Procesos RPA con Agente SQL Local y Predicción de ROI
+## Sinfama · Análisis de Procesos RPA con Agente SQL Local y Predicción de ROI
 
-Pipeline completo de datos para el análisis del portafolio de automatizaciones RPA de una organización de salud en Colombia. Incluye preprocesamiento, EDA enfocado en ROI, modelo predictivo de retorno de inversión y una interfaz de chat SQL 100% local impulsada por un LLM corriendo en Ollama.
+Pipeline completo de datos para el análisis del portafolio de automatizaciones RPA de una caja de compensación familiar (caso de estudio). Incluye preprocesamiento, EDA enfocado en ROI, modelo predictivo de retorno de inversión y una interfaz de chat SQL 100% local impulsada por un LLM corriendo en Ollama.
 
 ---
 
@@ -60,12 +60,14 @@ Ollama LLM              SQLite DB
 Proyecto1Especializacion/
 ├── app/
 │   └── chat.py                  ← interfaz Streamlit (Chat SQL / ROI / Predicción)
+├── assets/
+│   └── logo.svg                 ← logo Sinfama (paleta de marca)
 ├── src/
 │   ├── agent/
 │   │   ├── database.py          ← conexión SQLite y esquema para el LLM
 │   │   └── sql_agent.py         ← agente SQL con Ollama (generar SQL + interpretar)
 │   ├── models/
-│   │   └── roi_predictor.py     ← pipeline GBM con log-transform del target
+│   │   └── roi_predictor.py     ← pipeline XGBoost con log-transform del target
 │   └── utils/
 │       └── roi_calculator.py    ← cálculo de ROI desde las tres tablas
 ├── notebooks/
@@ -73,16 +75,17 @@ Proyecto1Especializacion/
 │   ├── 02_eda_roi.ipynb             ← EDA completo enfocado en ROI
 │   └── 03_modelo_roi.ipynb          ← entrenamiento y evaluación del modelo
 ├── scripts/
-│   └── csv_to_sqlite.py         ← convierte CSVs fuente a Procesos.db
+│   ├── csv_to_sqlite.py         ← convierte CSVs fuente a Procesos.db
+│   └── train_roi_model.py       ← pipeline reproducible (db → dataset → train → save)
 ├── data/
 │   ├── raw/                     ← archivos CSV originales (Git LFS)
 │   └── database/
 │       ├── Procesos.db          ← BD original (Git LFS)
 │       └── Procesos_clean.db    ← BD limpia y preprocesada (Git LFS)
-├── models/                      ← modelo entrenado roi_model.joblib (generado localmente)
-├── reports/figures/             ← graficas generadas por los notebooks
+├── models/                      ← roi_model.joblib (generado por train_roi_model.py)
+├── reports/                     ← figuras (notebooks) y métricas JSON (pipeline)
 ├── .streamlit/config.toml       ← configuración headless de Streamlit
-├── .claude/launch.json          ← configuración de servidores de desarrollo
+├── PITCH.md                     ← presentación académica del proyecto
 ├── pyproject.toml
 └── run_app.bat                  ← acceso rapido en Windows
 ```
@@ -130,9 +133,17 @@ uv sync
 ollama pull qwen2.5-coder:7b
 ```
 
-### 4. Preparar la base de datos
+### 4. Preparar la base de datos y entrenar el modelo
 
-Si es la primera vez, ejecutar los notebooks en orden:
+**Opción A — pipeline reproducible (recomendado para re-entrenamiento):**
+
+```bash
+uv run python scripts/train_roi_model.py
+```
+
+Construye el dataset desde `Procesos_clean.db`, entrena XGBoost (GPU si hay CUDA, fallback CPU automático) y guarda el modelo + métricas en `reports/metrics_roi.json`.
+
+**Opción B — notebooks paso a paso (recomendado la primera vez para entender el flujo):**
 
 ```
 notebooks/01_preprocesamiento.ipynb   ← genera Procesos_clean.db
