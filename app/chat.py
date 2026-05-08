@@ -18,10 +18,13 @@ from src.agent.database import get_db_stats
 from src.agent.sql_agent import DEFAULT_MODEL, ask, list_available_models
 from src.utils.roi_calculator import build_roi_dataset, get_roi_summary
 
+# ── Logo ──────────────────────────────────────────────────────────────────────
+LOGO_SVG = (Path(__file__).parent.parent / "assets" / "logo.svg").read_text(encoding="utf-8")
+
 # ── Configuración de página ───────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Comfama · Agente RPA",
-    page_icon="https://www.comfama.com/favicon.ico",
+    page_title="Sinfama · Agente RPA",
+    page_icon=str(Path(__file__).parent.parent / "assets" / "logo.svg"),
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -338,12 +341,12 @@ st.markdown("""<style>
 </style>
 """, unsafe_allow_html=True)
 
-# ── Header con logo Comfama ───────────────────────────────────────────────────
-st.markdown("""
+# ── Header con logo Sinfama ───────────────────────────────────────────────────
+st.markdown(f"""
 <div style="display:flex; align-items:center; gap:1rem; padding:0.5rem 0 1.5rem 0; border-bottom:3px solid #db0061; margin-bottom:1.5rem;">
-  <img src="https://www.comfama.com/favicon.ico" width="36" style="border-radius:6px;" onerror="this.style.display='none'">
+  <span style="display:inline-flex; width:42px; height:42px; flex-shrink:0;">{LOGO_SVG}</span>
   <div>
-    <span style="font-family:'Roboto',sans-serif; font-size:1.5rem; font-weight:700; color:#db0061;">comfama</span>
+    <span style="font-family:'Roboto',sans-serif; font-size:1.4rem; font-weight:700; color:#db0061;">Caja de compensación Sinfama</span>
     <span style="font-family:'Roboto',sans-serif; font-size:1rem; font-weight:400; color:#6f7287; margin-left:0.75rem;">· Agente SQL — Procesos RPA</span>
   </div>
 </div>
@@ -351,10 +354,11 @@ st.markdown("""
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("""
+    st.markdown(f"""
     <div style="padding:0.5rem 0 0.25rem 0; text-align:center;">
-      <span style="font-size:1.5rem; font-weight:700; color:#f15894; font-family:'Roboto',sans-serif; letter-spacing:-0.5px;">comfama</span><br>
-      <span style="font-size:0.7rem; color:#b7bad1; font-family:'Roboto',sans-serif;">Agente SQL · Procesos RPA</span>
+      <div style="display:inline-block; width:48px; height:48px; margin-bottom:1rem;">{LOGO_SVG}</div><br>
+      <span style="font-size:1.05rem; font-weight:700; color:#f15894; font-family:'Roboto',sans-serif; letter-spacing:-0.3px;">Caja de compensación<br>Sinfama</span><br>
+      <span style="display:inline-block; margin-top:0.5rem; font-size:0.7rem; color:#b7bad1; font-family:'Roboto',sans-serif;">Agente SQL · Procesos RPA</span>
     </div>
     """, unsafe_allow_html=True)
 
@@ -403,9 +407,7 @@ with st.sidebar:
     if "roi_summary" in st.session_state:
         s = st.session_state["roi_summary"]
         ahorro_m = s["ahorro_total_cop"] / 1_000_000
-        col1, col2 = st.columns(2)
-        col1.metric("Ahorro", f"${ahorro_m:,.0f}M")
-        col2.metric("ROI prom.", f"{s['roi_promedio_pct']:.0f}%")
+        st.metric("Ahorro", f"${ahorro_m:,.0f}M")
         st.caption(f"Top: **{s['mejor_bot']}**")
 
     st.markdown('<div style="margin-top:0.5rem;"></div>', unsafe_allow_html=True)
