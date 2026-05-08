@@ -2,25 +2,53 @@
 from fpdf import FPDF
 from pathlib import Path
 
-OUT = Path(__file__).parent.parent / "GUIA_INSTALACION.pdf"
+ROOT = Path(__file__).parent.parent
+OUT = ROOT / "GUIA_INSTALACION.pdf"
+LOGO_SVG = ROOT / "assets" / "logo.svg"
 
-PRIMARY  = (219, 0, 97)
-NAVY     = (27, 31, 48)
-GRAY_BG  = (246, 248, 255)
-GRAY_TXT = (80, 80, 100)
-WHITE    = (255, 255, 255)
-BLACK    = (30, 30, 30)
+PRIMARY      = (219, 0, 97)     # #db0061
+PRIMARY_DARK = (138, 0, 81)     # #8a0051
+NAVY         = (27, 31, 48)     # #1b1f30
+GRAY_BG      = (246, 248, 255)
+GRAY_TXT     = (80, 80, 100)
+WHITE        = (255, 255, 255)
+BLACK        = (30, 30, 30)
+YELLOW       = (240, 234, 20)   # accent
+CODE_TXT     = (255, 255, 255)  # texto blanco en bloques de codigo (alto contraste sobre navy)
+CODE_COMMENT = (240, 234, 20)   # comentarios (#...) en amarillo
+
+
+def draw_logo(pdf, x, y, size=20):
+    """Renderiza el logo de Sinfama. Intenta SVG; si falla, usa primitivas."""
+    try:
+        pdf.image(str(LOGO_SVG), x=x, y=y, w=size, h=size)
+        return
+    except Exception:
+        pass
+    pdf.set_fill_color(*PRIMARY)
+    try:
+        pdf.rect(x, y, size, size, "F", round_corners=True, corner_radius=size * 0.22)
+    except TypeError:
+        pdf.rect(x, y, size, size, "F")
+    pdf.set_fill_color(*YELLOW)
+    d = size * 0.26
+    pdf.ellipse(x + size * 0.72 - d / 2, y + size * 0.13 - d / 2, d, d, "F")
+    pdf.set_font("Helvetica", "B", int(size * 0.85))
+    pdf.set_text_color(*WHITE)
+    pdf.set_xy(x, y + size * 0.08)
+    pdf.cell(size, size * 0.9, "S", align="C")
 
 
 class PDF(FPDF):
     def header(self):
         self.set_fill_color(*NAVY)
         self.rect(0, 0, 210, 18, "F")
+        draw_logo(self, x=8, y=3, size=12)
         self.set_font("Helvetica", "B", 11)
-        self.set_text_color(*PRIMARY)
-        self.set_xy(10, 4)
-        self.cell(0, 10, "comfama  |  Agente SQL - Procesos RPA")
         self.set_text_color(*WHITE)
+        self.set_xy(24, 4)
+        self.cell(0, 10, "Sinfama  |  Agente SQL - Procesos RPA")
+        self.set_text_color(200, 200, 220)
         self.set_font("Helvetica", "", 8)
         self.set_xy(140, 4)
         self.cell(0, 10, "Guia de instalacion y ejecucion", align="R")
@@ -59,15 +87,22 @@ class PDF(FPDF):
 
     def code_block(self, lines):
         self.set_font("Courier", "", 9)
-        self.set_text_color(*PRIMARY)
         x = 10
         y = self.get_y()
         padding = 3
         total_h = len(lines) * 5 + padding * 2
         self.set_fill_color(*NAVY)
         self.rect(x, y, 190, total_h, "F")
+        # Borde izquierdo magenta para acento de marca
+        self.set_fill_color(*PRIMARY)
+        self.rect(x, y, 1.5, total_h, "F")
         self.set_xy(x + 4, y + padding)
         for line in lines:
+            stripped = line.lstrip()
+            if stripped.startswith("#"):
+                self.set_text_color(*CODE_COMMENT)
+            else:
+                self.set_text_color(*CODE_TXT)
             self.set_x(x + 4)
             self.cell(0, 5, line, ln=True)
         self.ln(3)
@@ -104,18 +139,23 @@ pdf.add_page()
 
 # ── Portada ───────────────────────────────────────────────────────────────────
 pdf.set_fill_color(*NAVY)
-pdf.rect(0, 18, 210, 65, "F")
-pdf.set_font("Helvetica", "B", 30)
-pdf.set_text_color(*PRIMARY)
-pdf.set_xy(10, 32)
-pdf.cell(0, 14, "comfama", align="C", ln=True)
-pdf.set_font("Helvetica", "", 14)
+pdf.rect(0, 18, 210, 75, "F")
+# Logo grande centrado
+draw_logo(pdf, x=(210 - 26) / 2, y=24, size=26)
+pdf.set_font("Helvetica", "B", 26)
 pdf.set_text_color(*WHITE)
-pdf.cell(0, 8, "Agente SQL - Procesos RPA", align="C", ln=True)
-pdf.set_font("Helvetica", "B", 11)
+pdf.set_xy(10, 54)
+pdf.cell(0, 10, "Sinfama", align="C", ln=True)
+pdf.set_font("Helvetica", "", 11)
+pdf.set_text_color(*PRIMARY)
+pdf.cell(0, 6, "Caja de compensacion", align="C", ln=True)
+pdf.set_font("Helvetica", "", 12)
+pdf.set_text_color(*WHITE)
+pdf.cell(0, 7, "Agente SQL - Procesos RPA", align="C", ln=True)
+pdf.set_font("Helvetica", "B", 10)
 pdf.set_text_color(200, 200, 220)
-pdf.cell(0, 8, "Guia de Instalacion y Ejecucion", align="C", ln=True)
-pdf.ln(48)
+pdf.cell(0, 7, "Guia de Instalacion y Ejecucion", align="C", ln=True)
+pdf.ln(38)
 
 pdf.set_text_color(*BLACK)
 pdf.set_font("Helvetica", "", 10)
@@ -249,11 +289,10 @@ for row in issues:
 # ── Estructura del proyecto ───────────────────────────────────────────────────
 pdf.section_title("9. Estructura del proyecto")
 pdf.set_font("Courier", "", 8.5)
-pdf.set_fill_color(*NAVY)
-pdf.set_text_color(*PRIMARY)
 estructura = [
     "Proyecto1Especializacion/",
     "  app/chat.py                    <- streamlit run app/chat.py",
+    "  assets/logo.svg                <- logo Sinfama",
     "  src/",
     "    agent/                       <- agente SQL + conexion DB",
     "    models/roi_predictor.py      <- XGBoost GPU/CPU",
@@ -267,11 +306,24 @@ estructura = [
 ]
 x, y = 10, pdf.get_y()
 h = len(estructura) * 5 + 6
+pdf.set_fill_color(*NAVY)
 pdf.rect(x, y, 190, h, "F")
+pdf.set_fill_color(*PRIMARY)
+pdf.rect(x, y, 1.5, h, "F")
+pdf.set_text_color(*CODE_TXT)
 pdf.set_xy(x + 4, y + 3)
 for line in estructura:
-    pdf.set_x(x + 4)
-    pdf.cell(0, 5, line, ln=True)
+    if "<-" in line:
+        path_part, _, comment_part = line.partition("<-")
+        pdf.set_x(x + 4)
+        pdf.set_text_color(*CODE_TXT)
+        pdf.cell(pdf.get_string_width(path_part), 5, path_part, ln=False)
+        pdf.set_text_color(*CODE_COMMENT)
+        pdf.cell(0, 5, "<-" + comment_part, ln=True)
+    else:
+        pdf.set_x(x + 4)
+        pdf.set_text_color(*CODE_TXT)
+        pdf.cell(0, 5, line, ln=True)
 pdf.set_text_color(*BLACK)
 pdf.ln(4)
 

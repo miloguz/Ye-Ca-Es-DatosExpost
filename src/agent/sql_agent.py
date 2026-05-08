@@ -19,6 +19,11 @@ DEFAULT_MODEL = "qwen2.5-coder:7b"
 MAX_HISTORY_MESSAGES = 8
 MAX_RESULT_ROWS_IN_PROMPT = 30
 
+DEFAULT_FALLBACK_MESSAGE = (
+    "Lo siento, no fue posible responder esta duda. "
+    "Intenta reformular la pregunta o consultar otra información."
+)
+
 _SYSTEM_PROMPT_TEMPLATE = """Eres un experto en análisis de datos de procesos RPA (Robotic Process Automation)
 para una organización de salud en Colombia. Puedes consultar una base de datos SQLite
 con el historial de ejecuciones de bots, tiempos manuales y ROI estimado.
@@ -83,12 +88,12 @@ def ask(question: str, history: list[dict], model: str = DEFAULT_MODEL) -> dict:
         err = str(e)
         if any(k in err.lower() for k in ("refused", "connect", "connection")):
             msg = (
-                "❌ No se puede conectar a Ollama. "
+                "No se puede conectar a Ollama. "
                 "Asegúrate de tener Ollama instalado y corriendo:\n\n"
                 "```\nollama serve\n```"
             )
         else:
-            msg = f"❌ Error al comunicarse con Ollama: {err}"
+            msg = DEFAULT_FALLBACK_MESSAGE
         return {"response": msg, "sql": None, "data": None, "columns": None, "error": err}
 
     sql = _extract_sql(raw)
@@ -98,11 +103,13 @@ def ask(question: str, history: list[dict], model: str = DEFAULT_MODEL) -> dict:
     try:
         df = execute_query(sql)
     except Exception as e:
-        response = (
-            f"Generé la siguiente consulta, pero ocurrió un error al ejecutarla:\n\n"
-            f"```sql\n{sql}\n```\n\n**Error:** {e}"
-        )
-        return {"response": response, "sql": sql, "data": None, "columns": None, "error": str(e)}
+        return {
+            "response": DEFAULT_FALLBACK_MESSAGE,
+            "sql": None,
+            "data": None,
+            "columns": None,
+            "error": str(e),
+        }
 
     result_text = _format_df_for_prompt(df)
     interp_messages = messages + [

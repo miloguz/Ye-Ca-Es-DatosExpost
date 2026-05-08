@@ -176,8 +176,6 @@ def predict(features: dict) -> dict:
       - DiasEnProduccion: int (opcional)
     """
     artifact = load_model()
-    pipeline = artifact["pipeline"]
-    use_log = artifact.get("log_transform", False)
 
     defaults = {
         "DuracionPromedio_Horas": features.get("TiempoManualHoras", 1) * 0.1,
@@ -191,11 +189,6 @@ def predict(features: dict) -> dict:
     }
     defaults.update(features)
 
-    row = pd.DataFrame([defaults])
-    X = prepare_features(row)
-    raw_pred = float(pipeline.predict(X)[0])
-    roi_pct = float(np.expm1(raw_pred)) if use_log else raw_pred
-
     val_hora = features.get("ValorHoraPromedio", 30000)
     num_ejec = features.get("Num_Ejecuciones", 100)
     tiempo_manual = features.get("TiempoManualHoras", 1)
@@ -205,6 +198,12 @@ def predict(features: dict) -> dict:
     beneficio = tiempo_manual * val_hora * num_ejec
     costo = dur_robot * val_hora * factor_costo * num_ejec
     ahorro = beneficio - costo
+
+    # ROI determinístico desde la fórmula — coherente con el ahorro mostrado.
+    # El modelo XGBoost se entrenó sobre log1p(ROI) con outliers de hasta 500,000%,
+    # por lo que sus predicciones extrapolan a valores poco realistas. La fórmula
+    # es la fuente de verdad dadas las entradas del usuario.
+    roi_pct = float((ahorro / costo) * 100) if costo > 0 else 0.0
 
     return {
         "roi_porcentaje": roi_pct,
