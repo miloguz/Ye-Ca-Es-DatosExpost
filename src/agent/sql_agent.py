@@ -9,11 +9,15 @@ Flujo:
   4. El LLM interpreta los resultados y responde en español.
 """
 
+import logging
 import re
 
 import ollama
+import pandas as pd
 
 from .database import execute_query, get_schema
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_MODEL = "qwen2.5-coder:7b"
 MAX_HISTORY_MESSAGES = 8
@@ -55,7 +59,7 @@ def _extract_sql(text: str) -> str | None:
     return None
 
 
-def _format_df_for_prompt(df) -> str:
+def _format_df_for_prompt(df: pd.DataFrame | None) -> str:
     if df is None or df.empty:
         return "La consulta no retornó resultados."
     preview = df.head(MAX_RESULT_ROWS_IN_PROMPT)
@@ -103,6 +107,7 @@ def ask(question: str, history: list[dict], model: str = DEFAULT_MODEL) -> dict:
     try:
         df = execute_query(sql)
     except Exception as e:
+        logger.warning("SQL execution failed: %s\nSQL: %s", e, sql)
         return {
             "response": DEFAULT_FALLBACK_MESSAGE,
             "sql": None,
@@ -144,5 +149,6 @@ def list_available_models() -> list[str]:
     try:
         models = ollama.list()
         return [m["model"] for m in models.get("models", [])]
-    except Exception:
+    except Exception as e:
+        logger.info("No se pudo listar modelos de Ollama: %s", e)
         return []

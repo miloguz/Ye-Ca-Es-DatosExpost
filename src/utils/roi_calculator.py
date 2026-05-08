@@ -12,12 +12,11 @@ de lo que costaría un operador humano ejecutando la misma tarea.
 """
 
 import sqlite3
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-DB_PATH = Path(__file__).parent.parent.parent / "data" / "database" / "Procesos_clean.db"
+from ..agent.database import DB_PATH
 
 FACTOR_COSTO_ROBOT = 0.25
 

@@ -306,3 +306,18 @@ reports/figures/*
 
 # Ollama — cache local de modelos (nunca subir, son varios GB)
 .ollama/
+
+# Métricas y reportes generados por scripts/train_roi_model.py
+reports/metrics_*.json
+
+# Claude Code — configuración local de sesión y worktrees auxiliares
+.claude/
+
+# Artefacto residual de Windows: se crea cuando un comando hace `2>/dev/null`
+# en bash y "null" termina interpretándose como ruta relativa
+dev/null/
+
+# Editores
+.idea/
+.vscode/
+*.swp
