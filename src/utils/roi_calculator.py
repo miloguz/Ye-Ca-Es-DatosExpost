@@ -3,12 +3,18 @@ Cálculo de ROI para automatizaciones RPA.
 
 Fórmula:
   Beneficio_Bruto = TiempoManual_Horas × ValorHora_COP × Num_Ejecuciones
-  Costo_Robot     = DuracionRobot_Horas × ValorHora_COP × FACTOR_COSTO_ROBOT × Num_Ejecuciones
+  Costo_Robot     = DuracionRobot_Horas × COSTO_HORA_ROBOT_COP × Num_Ejecuciones
   Ahorro_Neto     = Beneficio_Bruto - Costo_Robot
   ROI_%           = (Ahorro_Neto / Costo_Robot) × 100
 
-El FACTOR_COSTO_ROBOT (0.25) refleja que mantener un robot cuesta ~25%
-de lo que costaría un operador humano ejecutando la misma tarea.
+COSTO_HORA_ROBOT_COP = 7.300 COP/hora es el costo operativo estándar de un
+robot, independiente del rol que reemplace. Se obtiene de:
+  - Servidor Azure:                     150.000 COP/mes
+  - Licencia UiPath robot + orquestador: 5.200.000 COP/mes
+  - Total mensual:                       5.350.000 COP / ~730 h/mes ≈ 7.300 COP/h
+
+Este valor se aplica de forma uniforme a todas las soluciones del portafolio
+para hacer comparables los ROIs entre proyectos.
 """
 
 import sqlite3
@@ -18,7 +24,7 @@ import pandas as pd
 
 from ..agent.database import DB_PATH
 
-FACTOR_COSTO_ROBOT = 0.25
+COSTO_HORA_ROBOT_COP = 7300
 
 
 def _parse_duration_hours(series: pd.Series) -> pd.Series:
@@ -101,8 +107,7 @@ def build_roi_dataset() -> pd.DataFrame:
     )
     df["Costo_Robot_COP"] = (
         df["DuracionPromedio_Horas"].fillna(df["TiempoManualHoras"] * 0.1)
-        * df["ValorHoraPromedio"]
-        * FACTOR_COSTO_ROBOT
+        * COSTO_HORA_ROBOT_COP
         * df["Num_Ejecuciones"]
     )
     df["Ahorro_Neto_COP"] = df["Beneficio_Bruto_COP"] - df["Costo_Robot_COP"]

@@ -23,6 +23,8 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 import xgboost as xgb
 
+from ..utils.roi_calculator import COSTO_HORA_ROBOT_COP
+
 MODEL_DIR = Path(__file__).parent.parent.parent / "models"
 MODEL_PATH = MODEL_DIR / "roi_model.joblib"
 
@@ -193,10 +195,9 @@ def predict(features: dict) -> dict:
     num_ejec = features.get("Num_Ejecuciones", 100)
     tiempo_manual = features.get("TiempoManualHoras", 1)
     dur_robot = defaults["DuracionPromedio_Horas"]
-    factor_costo = 0.25
 
     beneficio = tiempo_manual * val_hora * num_ejec
-    costo = dur_robot * val_hora * factor_costo * num_ejec
+    costo = dur_robot * COSTO_HORA_ROBOT_COP * num_ejec
     ahorro = beneficio - costo
 
     # ROI determinístico desde la fórmula — coherente con el ahorro mostrado.
