@@ -6,17 +6,36 @@ Iniciar:
     streamlit run app/chat.py
 """
 
+import io
 import sys
 from pathlib import Path
 
 import pandas as pd
 import streamlit as st
+from streamlit_mic_recorder import mic_recorder
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.agent.database import get_db_stats
 from src.agent.sql_agent import DEFAULT_MODEL, ask, list_available_models
 from src.utils.roi_calculator import build_roi_dataset, get_roi_summary
+
+
+@st.cache_resource(show_spinner="Cargando modelo de transcripción...")
+def get_whisper_model():
+    """Carga el modelo Whisper-small (CPU, int8) y lo cachea entre reruns."""
+    from faster_whisper import WhisperModel
+
+    return WhisperModel("small", device="cpu", compute_type="int8")
+
+
+def transcribe_audio(audio_bytes: bytes) -> str:
+    """Transcribe bytes de audio a texto en español usando faster-whisper."""
+    model = get_whisper_model()
+    segments, _info = model.transcribe(
+        io.BytesIO(audio_bytes), language="es", beam_size=5
+    )
+    return " ".join(seg.text for seg in segments).strip()
 
 # ── Logo ──────────────────────────────────────────────────────────────────────
 LOGO_SVG = (Path(__file__).parent.parent / "assets" / "logo.svg").read_text(encoding="utf-8")
@@ -443,8 +462,44 @@ with tab_chat:
                 df_display = pd.DataFrame(msg["data"], columns=msg["columns"])
                 st.dataframe(df_display, use_container_width=True, hide_index=True)
 
-    # Input del usuario
-    if prompt := st.chat_input("Pregunta algo sobre los datos..."):
+    # Entrada por voz (opcional)
+    col_mic, col_hint = st.columns([1, 4])
+    with col_mic:
+        audio = mic_recorder(
+            start_prompt="🎤 Grabar pregunta",
+            stop_prompt="⏹️ Detener",
+            just_once=False,
+            use_container_width=True,
+            format="wav",
+            key="mic_chat",
+        )
+    with col_hint:
+        st.caption(
+            "Habla tu pregunta en español. Al detener, se transcribe localmente "
+            "con Whisper y se envía al agente SQL."
+        )
+
+    voice_prompt = None
+    if audio and audio.get("bytes"):
+        if audio.get("id") != st.session_state.get("last_audio_id"):
+            st.session_state["last_audio_id"] = audio.get("id")
+            with st.spinner("Transcribiendo audio..."):
+                try:
+                    voice_prompt = transcribe_audio(audio["bytes"])
+                except Exception as exc:
+                    st.error(f"Error al transcribir: {exc}")
+                    voice_prompt = None
+            if not voice_prompt:
+                st.warning(
+                    "No detecté palabras en el audio. Intenta hablar más claro o más cerca del micrófono."
+                )
+
+    # Entrada por texto
+    text_prompt = st.chat_input("Pregunta algo sobre los datos...")
+
+    prompt = voice_prompt or text_prompt
+
+    if prompt:
         st.session_state["messages"].append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)

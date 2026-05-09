@@ -331,13 +331,22 @@ pdf.ln(4)
 pdf.section_title("10. Formula de calculo de ROI")
 pdf.code_block([
     "Beneficio_Bruto = TiempoManual x ValorHora x NumEjecuciones",
-    "Costo_Robot     = DuracionRobot x ValorHora x 0.25 x NumEjecuciones",
+    "Costo_Robot     = DuracionRobot x 7300 x NumEjecuciones",
     "Ahorro_Neto     = Beneficio_Bruto - Costo_Robot",
     "ROI%            = (Ahorro_Neto / Costo_Robot) x 100",
 ])
 pdf.body(
-    "El modelo predictivo (XGBoost) aplica transformacion log1p(ROI) antes de entrenar\n"
-    "para manejar la distribucion sesgada del target (ROI puede superar el 500,000%)."
+    "El costo operativo del robot se estandariza en 7.300 COP/hora para todas las\n"
+    "soluciones del portafolio. Este valor proviene de la infraestructura real:\n"
+    "  - Servidor Azure:                       150.000 COP/mes\n"
+    "  - Licencia UiPath robot + orquestador:  5.200.000 COP/mes\n"
+    "  - Total mensual:                        5.350.000 COP / ~730 h ~= 7.300 COP/h\n"
+    "\n"
+    "Aplicar una tarifa uniforme hace comparables los ROIs entre proyectos sin\n"
+    "importar el rol que cada bot reemplace.\n"
+    "\n"
+    "El modelo predictivo (XGBoost) aplica transformacion log1p(ROI) antes de\n"
+    "entrenar para manejar la distribucion sesgada del target."
 )
 
 pdf.output(str(OUT))

@@ -53,10 +53,19 @@ El comando `uv run python scripts/train_roi_model.py` reentrena todo end-to-end,
 **Fórmula** (dominio del negocio, no aprendida de los datos):
 
 $$
-\text{ROI}_\% = \frac{T_{manual} - T_{robot} \cdot f_{robot}}{T_{robot} \cdot f_{robot}} \times 100
+\text{ROI}_\% = \frac{T_{manual} \cdot V_{hora} - T_{robot} \cdot C_{robot}}{T_{robot} \cdot C_{robot}} \times 100
 $$
 
-donde $f_{robot} = 0{,}25$ representa que mantener el robot cuesta ≈25% del valor-hora humano (parámetro asumido del dominio).
+donde $C_{robot} = 7{.}300$ COP/hora es el **costo operativo estándar de un robot**, calculado a partir de la infraestructura real del servicio:
+
+| Concepto | Valor mensual (COP) |
+|---|---|
+| Servidor Azure | 150.000 |
+| Licencia UiPath robot + orquestador | 5.200.000 |
+| **Total** | **5.350.000** |
+| ÷ 730 h/mes | **≈ 7.300 COP/h** |
+
+Esta tarifa fija reemplaza el factor previo ($f_{robot} = 0{,}25 \cdot V_{hora}$) que dependía del rol reemplazado. Usar un costo uniforme para toda la infraestructura RPA hace comparables los ROIs entre proyectos: dos bots con la misma duración cuestan lo mismo, sin importar si automatizan a un cajero o a un analista financiero.
 
 ### ¿Por qué no usar la salida del modelo ML para mostrar el ROI?
 
@@ -109,12 +118,12 @@ Encapsular preprocesamiento + estimador en un `Pipeline` previene **fugas de dat
 
 | Métrica | Valor | Interpretación |
 |---|---|---|
-| R² (test, log-scale) | 0,11 | Explicamos ~11% de la varianza fuera de muestra. Bajo, esperado con n=33. |
-| R² CV 5-fold (mean ± std) | 0,26 ± 0,28 | Alta varianza entre folds: el modelo no es estable. |
-| MAE (escala original) | 58.657% | Error absoluto enorme — refleja el sesgo del target. |
+| R² (test, log-scale) | 0,81 | Sobre el split de test (n=6). Una sola muestra de tamaño bajo puede inflar este valor. |
+| R² CV 5-fold (mean ± std) | 0,03 ± 0,27 | Cerca de cero con alta varianza: el modelo NO es estable entre folds. |
+| MAE (escala original) | 2.291% | Mejoró significativamente vs. la fórmula previa, pero sigue siendo alto. |
 | Dispositivo | CUDA (RTX 4060) | Entrenamiento en ~3 segundos. |
 
-**Lectura honesta de las métricas:** con 33 muestras efectivas no hay forma de entrenar un modelo predictivo confiable de un target con cola tan larga. El proyecto documenta esto explícitamente y deja la fórmula determinística como salida principal. **El valor académico está en haber identificado, medido y comunicado correctamente esta limitación**, no en haber inflado un número de R².
+**Lectura honesta de las métricas:** el R² del split de test (0,81) parece prometedor, pero la métrica que importa es el R² de validación cruzada (0,03 ± 0,27). Con n=30 muestras efectivas, el modelo se beneficia o se perjudica fuertemente según qué bots caigan en cada fold. La conclusión sigue siendo la misma: **no hay forma de entrenar un modelo predictivo confiable con esta cantidad de datos**. El proyecto documenta esto explícitamente y deja la fórmula determinística como salida principal. **El valor académico está en haber identificado, medido y comunicado correctamente esta limitación**, no en celebrar un R² de test que la CV no respalda.
 
 ### 5.4 Variables más importantes (interpretabilidad)
 
