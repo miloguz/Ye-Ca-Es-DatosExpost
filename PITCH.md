@@ -53,7 +53,7 @@ El comando `uv run python scripts/train_roi_model.py` reentrena todo end-to-end,
 **Fórmula** (dominio del negocio, no aprendida de los datos):
 
 $$
-\text{ROI}_\% = \frac{T_{manual} \cdot V_{hora} - T_{robot} \cdot C_{robot}}{T_{robot} \cdot C_{robot}} \times 100
+\text{ROI}_\% = \frac{(T_{manual} \cdot V_{hora}) - (T_{robot} \cdot C_{robot})}{T_{robot} \cdot C_{robot}} \times 100
 $$
 
 donde $C_{robot} = 7{.}300$ COP/hora es el **costo operativo estándar de un robot**, calculado a partir de la infraestructura real del servicio:
