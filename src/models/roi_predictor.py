@@ -23,8 +23,6 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 import xgboost as xgb
 
-from ..utils.roi_calculator import COSTO_HORA_ROBOT_COP
-
 MODEL_DIR = Path(__file__).parent.parent.parent / "models"
 MODEL_PATH = MODEL_DIR / "roi_model.joblib"
 
@@ -160,59 +158,6 @@ def load_model() -> dict:
             "Ejecuta el notebook 03_modelo_roi.ipynb primero."
         )
     return joblib.load(MODEL_PATH)
-
-
-def predict(features: dict) -> dict:
-    """
-    Predice ROI para un bot nuevo dado sus características.
-
-    features (dict) debe incluir:
-      - TiempoManualHoras: float
-      - Num_Ejecuciones: int
-      - ValorHoraPromedio: float
-      - Tecnologia: str  ("UiPath" | "IRPA" | "Power Automate")
-      - Estado: str      ("Activo" | "Inactivo")
-      - DuracionPromedio_Horas: float (opcional, default = TiempoManualHoras * 0.1)
-      - PromTransacciones: float (opcional, default = 1)
-      - EjecucionesPorDia: float (opcional)
-      - DiasEnProduccion: int (opcional)
-    """
-    artifact = load_model()
-
-    defaults = {
-        "DuracionPromedio_Horas": features.get("TiempoManualHoras", 1) * 0.1,
-        "PromTransacciones": 1.0,
-        "TasaExito": 0.9,
-        "TasaError": 0.05,
-        "EjecucionesPorDia": features.get("Num_Ejecuciones", 100) / 365,
-        "DiasEnProduccion": 365,
-        "NumAreas": 1,
-        "NumRoles": 1,
-    }
-    defaults.update(features)
-
-    val_hora = features.get("ValorHoraPromedio", 30000)
-    num_ejec = features.get("Num_Ejecuciones", 100)
-    tiempo_manual = features.get("TiempoManualHoras", 1)
-    dur_robot = defaults["DuracionPromedio_Horas"]
-
-    beneficio = tiempo_manual * val_hora * num_ejec
-    costo = dur_robot * COSTO_HORA_ROBOT_COP * num_ejec
-    ahorro = beneficio - costo
-
-    # ROI determinístico desde la fórmula — coherente con el ahorro mostrado.
-    # El modelo XGBoost se entrenó sobre log1p(ROI) con outliers de hasta 500,000%,
-    # por lo que sus predicciones extrapolan a valores poco realistas. La fórmula
-    # es la fuente de verdad dadas las entradas del usuario.
-    roi_pct = float((ahorro / costo) * 100) if costo > 0 else 0.0
-
-    return {
-        "roi_porcentaje": roi_pct,
-        "ahorro_neto_cop": ahorro,
-        "beneficio_bruto_cop": beneficio,
-        "costo_robot_cop": costo,
-        "device_usado": artifact.get("device", "cpu"),
-    }
 
 
 def get_feature_importance(top_n: int = 15) -> pd.DataFrame:

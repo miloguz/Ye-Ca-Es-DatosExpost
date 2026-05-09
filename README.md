@@ -1,7 +1,7 @@
 # Proyecto 1 — Especialización en Ciencia de Datos e IA
-## Sinfama · Análisis de Procesos RPA con Agente SQL Local y Predicción de ROI
+## Sinfama · Análisis de Procesos RPA con Agente SQL Local y Calculadora de ROI
 
-Pipeline completo de datos para el análisis del portafolio de automatizaciones RPA de una caja de compensación familiar (caso de estudio). Incluye preprocesamiento, EDA enfocado en ROI, modelo predictivo de retorno de inversión y una interfaz de chat SQL 100% local impulsada por dos modelos de IA corriendo localmente: **Qwen 2.5 Coder** (LLM via Ollama) para text-to-SQL y **Whisper** (faster-whisper) para entrada por voz en español.
+Pipeline completo de datos para el análisis del portafolio de automatizaciones RPA de una caja de compensación familiar (caso de estudio). Incluye preprocesamiento, EDA enfocado en ROI, calculadora determinística de ROI con costo operativo estandarizado y una interfaz de chat SQL 100% local impulsada por dos modelos de IA corriendo localmente: **Qwen 2.5 Coder** (LLM via Ollama) para text-to-SQL y **Whisper** (faster-whisper) para entrada por voz en español.
 
 ---
 
@@ -27,7 +27,7 @@ El proyecto integra tres fuentes de datos sobre automatizaciones RPA (`Registros
 
 1. **¿Cuánto valor generan los bots actuales?** — Cálculo de ROI real por automatización.
 2. **¿Qué factores determinan el ROI?** — EDA correlacional y segmentación por cuadrantes.
-3. **¿Cuánto ROI generará un nuevo bot antes de implementarlo?** — Modelo GBM predictivo.
+3. **¿Cuánto ROI generará un nuevo bot antes de implementarlo?** — Calculadora basada en la fórmula del negocio (auditable, sin modelo de caja negra).
 
 Todo esto se expone a través de una interfaz de chat en lenguaje natural donde el usuario puede hacer preguntas sobre los datos sin conocer SQL.
 
@@ -284,12 +284,14 @@ Visualizaciones interactivas del portafolio:
 - Scatter ROI vs volumen de ejecuciones por tecnología
 - Tabla detallada con métricas por automatización
 
-### Pestaña 3 — Predicción ROI
-Estima el ROI de un nuevo bot antes de implementarlo ingresando:
+### Pestaña 3 — Calculadora de ROI
+Calcula el ROI esperado de un nuevo proceso RPA aplicando la fórmula del negocio (no usa modelo predictivo, es matemática auditable). Solo requiere 4 entradas:
 - Tiempo manual por ejecución (horas)
-- Ejecuciones esperadas
-- Valor hora del rol (COP)
-- Tecnología RPA y duración estimada del robot
+- Ejecuciones esperadas (total)
+- Valor hora del rol humano (COP)
+- Duración estimada del robot (horas)
+
+El costo operativo del robot es **fijo en 7.300 COP/hora** (servidor Azure + licencia UiPath). La pestaña muestra ROI%, ahorro neto, beneficio bruto y costo total, junto con un expander que detalla la fórmula aplicada paso a paso.
 
 ---
 
