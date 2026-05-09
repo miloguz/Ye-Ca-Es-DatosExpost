@@ -232,4 +232,4 @@ Cuando el SQL generado falla (columna inexistente, sintaxis inválida) o Ollama 
 
 ---
 
-> **Demo en clase**: pestañas Chat SQL → Análisis ROI → Predicción ROI; mostrar `scripts/train_roi_model.py` corriendo y `reports/metrics_roi.json` actualizándose.
+> **Demo en clase**: pestañas Chat SQL → Análisis ROI → Calculadora de ROI; mostrar `scripts/train_roi_model.py` corriendo y `reports/metrics_roi.json` actualizándose.

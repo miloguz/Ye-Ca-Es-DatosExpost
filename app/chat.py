@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.agent.database import get_db_stats
 from src.agent.sql_agent import DEFAULT_MODEL, ask, list_available_models
-from src.utils.roi_calculator import build_roi_dataset, get_roi_summary
+from src.utils.roi_calculator import COSTO_HORA_ROBOT_COP, build_roi_dataset, get_roi_summary
 
 
 @st.cache_resource(show_spinner="Cargando modelo de transcripción...")
@@ -435,7 +435,7 @@ with st.sidebar:
         st.rerun()
 
 # ── Área principal — pestañas ─────────────────────────────────────────────────
-tab_chat, tab_roi, tab_predict = st.tabs(["💬 Chat SQL", "📊 Análisis ROI", "🔮 Predicción ROI"])
+tab_chat, tab_roi, tab_calc = st.tabs(["💬 Chat SQL", "📊 Análisis ROI", "🧮 Calculadora de ROI"])
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TAB 1 · CHAT
@@ -626,18 +626,18 @@ with tab_roi:
 # ─────────────────────────────────────────────────────────────────────────────
 # TAB 3 · PREDICCIÓN ROI
 # ─────────────────────────────────────────────────────────────────────────────
-with tab_predict:
-    st.markdown("### Predicción de ROI para un nuevo bot")
+with tab_calc:
+    st.markdown("### Calculadora de ROI para un nuevo bot")
     st.caption(
-        "Ingresa las características de un nuevo proceso RPA para estimar su ROI "
-        "antes de implementarlo. Requiere haber entrenado el modelo primero "
-        "(notebook `03_modelo_roi.ipynb`)."
+        f"Calcula el ROI esperado de un nuevo proceso RPA aplicando la fórmula del "
+        f"negocio. El costo operativo del robot se estandariza en "
+        f"**{COSTO_HORA_ROBOT_COP:,} COP/hora** (servidor Azure + licencia UiPath)."
     )
 
     col_f, col_r = st.columns([1, 1])
 
     with col_f:
-        st.markdown("#### Características del bot")
+        st.markdown("#### Parámetros del proceso")
         tiempo_manual = st.number_input(
             "Tiempo manual por ejecución (horas)", min_value=0.01, value=2.0, step=0.25
         )
@@ -645,63 +645,42 @@ with tab_predict:
             "Ejecuciones esperadas (total)", min_value=1, value=500, step=50
         )
         valor_hora = st.number_input(
-            "Valor hora del rol (COP)", min_value=5000, value=30000, step=1000
-        )
-        tecnologia = st.selectbox(
-            "Tecnología RPA", ["UiPath", "Power Automate", "IRPA", "Desconocida"]
+            "Valor hora del rol humano (COP)", min_value=5000, value=30000, step=1000
         )
         duracion_robot = st.number_input(
             "Duración estimada del robot (horas)", min_value=0.001, value=0.15, step=0.05
         )
-        estado = st.selectbox("Estado esperado", ["Activo", "Inactivo"])
 
     with col_r:
-        st.markdown("#### Resultado estimado")
-        if st.button("Predecir ROI", type="primary", use_container_width=True):
-            try:
-                from src.models.roi_predictor import predict
+        st.markdown("#### Resultado calculado")
+        if st.button("Calcular ROI", type="primary", use_container_width=True):
+            beneficio = tiempo_manual * valor_hora * num_ejecuciones
+            costo = duracion_robot * COSTO_HORA_ROBOT_COP * num_ejecuciones
+            ahorro = beneficio - costo
+            roi = (ahorro / costo * 100) if costo > 0 else 0.0
 
-                result = predict(
-                    {
-                        "TiempoManualHoras": tiempo_manual,
-                        "Num_Ejecuciones": num_ejecuciones,
-                        "ValorHoraPromedio": valor_hora,
-                        "Tecnologia": tecnologia,
-                        "Estado": estado,
-                        "DuracionPromedio_Horas": duracion_robot,
-                        "PromTransacciones": 5.0,
-                        "TasaExito": 0.9,
-                        "TasaError": 0.05,
-                        "EjecucionesPorDia": num_ejecuciones / 365,
-                        "DiasEnProduccion": 365,
-                        "NumAreas": 1,
-                        "NumRoles": 1,
-                    }
+            color = "normal" if roi > 0 else "inverse"
+            st.metric("ROI calculado", f"{roi:,.0f}%", delta=f"{roi:,.0f}%", delta_color=color)
+            st.metric("Ahorro neto", f"${ahorro / 1e6:,.2f}M COP")
+            st.metric("Beneficio bruto", f"${beneficio / 1e6:,.2f}M COP")
+            st.metric("Costo total del robot", f"${costo / 1e6:,.2f}M COP")
+
+            with st.expander("Ver fórmula aplicada"):
+                st.code(
+                    f"Beneficio = {tiempo_manual} h × {valor_hora:,} COP/h × {num_ejecuciones:,}\n"
+                    f"          = {beneficio:,.0f} COP\n\n"
+                    f"Costo     = {duracion_robot} h × {COSTO_HORA_ROBOT_COP:,} COP/h × {num_ejecuciones:,}\n"
+                    f"          = {costo:,.0f} COP\n\n"
+                    f"Ahorro    = Beneficio − Costo = {ahorro:,.0f} COP\n"
+                    f"ROI%      = (Ahorro / Costo) × 100 = {roi:,.1f}%",
+                    language="text",
                 )
-                roi = result["roi_porcentaje"]
-                ahorro = result["ahorro_neto_cop"]
-                beneficio = result["beneficio_bruto_cop"]
-                costo = result["costo_robot_cop"]
 
-                color = "normal" if roi > 0 else "inverse"
-                st.metric("ROI predicho", f"{roi:.0f}%", delta=f"{roi:.0f}%", delta_color=color)
-                st.metric("Ahorro neto estimado", f"${ahorro / 1e6:.2f}M COP")
-                st.metric("Beneficio bruto", f"${beneficio / 1e6:.2f}M COP")
-                st.metric("Costo estimado robot", f"${costo / 1e6:.2f}M COP")
-
-                if roi > 500:
-                    st.success("Excelente oportunidad de automatización.")
-                elif roi > 100:
-                    st.info("Buena candidata para automatización.")
-                elif roi > 0:
-                    st.warning("ROI positivo pero bajo. Considera optimizar el proceso.")
-                else:
-                    st.error("ROI negativo. Este proceso puede no ser rentable para RPA.")
-
-            except FileNotFoundError:
-                st.error(
-                    "El modelo no está entrenado aún.\n\n"
-                    "Ejecuta el notebook `notebooks/03_modelo_roi.ipynb` primero."
-                )
-            except Exception as e:
-                st.error(f"Error al predecir: {e}")
+            if roi > 500:
+                st.success("Excelente oportunidad de automatización.")
+            elif roi > 100:
+                st.info("Buena candidata para automatización.")
+            elif roi > 0:
+                st.warning("ROI positivo pero bajo. Considera optimizar el proceso.")
+            else:
+                st.error("ROI negativo. Este proceso puede no ser rentable para RPA.")
