@@ -1,4 +1,17 @@
+<p align="center">
+  <img src="assets/logo.svg" width="220" alt="Sinfama" />
+</p>
+
 # Proyecto 1 — Especialización en Ciencia de Datos e IA
+
+## Equipo
+
+Proyecto desarrollado para la materia **proyecto 1**.
+
+- Camilo Guzmán
+- Yennifer Serna
+- Esneyder Gómez
+
 ## Sinfama · Análisis de Procesos RPA con Agente SQL Local y Calculadora de ROI
 
 Pipeline completo de datos para el análisis del portafolio de automatizaciones RPA de una caja de compensación familiar (caso de estudio). Incluye preprocesamiento, EDA enfocado en ROI, calculadora determinística de ROI con costo operativo estandarizado y una interfaz de chat SQL 100% local impulsada por dos modelos de IA corriendo localmente: **Qwen 2.5 Coder** (LLM via Ollama) para text-to-SQL y **Whisper** (faster-whisper) para entrada por voz en español.
@@ -17,7 +30,9 @@ Pipeline completo de datos para el análisis del portafolio de automatizaciones 
 - [Solución de Problemas](#solución-de-problemas)
 - [Funcionalidades](#funcionalidades)
 - [Datos](#datos)
-- [Modelo de ROI](#modelo-de-roi)
+- [Cálculo de ROI](#cálculo-de-roi)
+- [Limitaciones Conocidas](#limitaciones-conocidas)
+- [Equipo](#equipo)
 
 ---
 
@@ -29,7 +44,23 @@ El proyecto integra tres fuentes de datos sobre automatizaciones RPA (`Registros
 2. **¿Qué factores determinan el ROI?** — EDA correlacional y segmentación por cuadrantes.
 3. **¿Cuánto ROI generará un nuevo bot antes de implementarlo?** — Calculadora basada en la fórmula del negocio (auditable, sin modelo de caja negra).
 
-Todo esto se expone a través de una interfaz de chat en lenguaje natural donde el usuario puede hacer preguntas sobre los datos sin conocer SQL.
+### Modelos de IA utilizados
+
+El proyecto corre **dos modelos de IA 100% locales**, sin enviar datos a la nube:
+
+- **Qwen 2.5 Coder 7B** (vía Ollama) — LLM especializado en código que convierte preguntas en lenguaje natural a consultas SQL, las ejecuta sobre la base de datos SQLite y narra la respuesta en español.
+- **Whisper-small** (vía faster-whisper) — Modelo de transcripción de voz a texto en español, optimizado para CPU.
+
+### Interfaz de chat con preguntas directas
+
+Para que el usuario pueda hacer preguntas directas sobre los datos sin conocer SQL, se implementó un **agente SQL** (`src/agent/sql_agent.py`) que:
+
+1. Recibe la pregunta del usuario en español (texto o voz).
+2. Le entrega al LLM el esquema de la base de datos limpia (`Procesos_clean.db`) como contexto.
+3. El LLM genera la consulta SQL apropiada, que se ejecuta sobre SQLite.
+4. El resultado se devuelve en formato tabla **y** se acompaña de una explicación en lenguaje natural generada por el mismo LLM.
+
+Adicionalmente, se integra **Whisper** para entradas por voz: el usuario presiona el botón 🎤, dicta su pregunta en español, y faster-whisper la transcribe localmente antes de enviarla al agente SQL — útil para hacer consultas rápidas sin escribir.
 
 ---
 
@@ -63,7 +94,7 @@ Whisper-small        │
 
 **Dos modelos de IA, 100% locales:**
 - **Whisper-small** transcribe la voz del usuario a texto en español (~480 MB, corre en CPU).
-- **Qwen 2.5 Coder 7B** convierte el texto en SQL, lo ejecuta y narra la respuesta (~5 GB, corre en GPU si está disponible).
+- **Qwen 2.5 Coder 7B** convierte el texto en SQL, lo ejecuta y narra la respuesta (~4,7 GB, corre en GPU si está disponible).
 
 ---
 
@@ -72,7 +103,7 @@ Whisper-small        │
 ```
 Proyecto1Especializacion/
 ├── app/
-│   └── chat.py                  ← interfaz Streamlit (Chat SQL / ROI / Predicción)
+│   └── chat.py                  ← interfaz Streamlit (Chat SQL / ROI / Calculadora)
 ├── assets/
 │   └── logo.svg                 ← logo Sinfama (paleta de marca)
 ├── src/
@@ -80,23 +111,23 @@ Proyecto1Especializacion/
 │   │   ├── database.py          ← conexión SQLite y esquema para el LLM
 │   │   └── sql_agent.py         ← agente SQL con Ollama (generar SQL + interpretar)
 │   ├── models/
-│   │   └── roi_predictor.py     ← pipeline XGBoost con log-transform del target
+│   │   └── roi_predictor.py     ← (experimental) pipeline XGBoost con log-transform
 │   └── utils/
 │       └── roi_calculator.py    ← cálculo de ROI desde las tres tablas
 ├── notebooks/
 │   ├── 01_preprocesamiento.ipynb    ← limpieza y normalización de datos
 │   ├── 02_eda_roi.ipynb             ← EDA completo enfocado en ROI
-│   └── 03_modelo_roi.ipynb          ← entrenamiento y evaluación del modelo
+│   └── 03_modelo_roi.ipynb          ← (experimental) entrenamiento XGBoost
 ├── scripts/
 │   ├── csv_to_sqlite.py         ← convierte CSVs fuente a Procesos.db
-│   ├── train_roi_model.py       ← pipeline reproducible (db → dataset → train → save)
+│   ├── train_roi_model.py       ← (experimental) pipeline XGBoost (db → train → save)
 │   └── download_whisper.py      ← pre-descarga el modelo Whisper-small (~480 MB)
 ├── data/
 │   ├── raw/                     ← archivos CSV originales (Git LFS)
 │   └── database/
 │       ├── Procesos.db          ← BD original (Git LFS)
 │       └── Procesos_clean.db    ← BD limpia y preprocesada (Git LFS)
-├── models/                      ← roi_model.joblib (generado por train_roi_model.py)
+├── models/                      ← (experimental) roi_model.joblib
 ├── reports/                     ← figuras (notebooks) y métricas JSON (pipeline)
 ├── .streamlit/config.toml       ← configuración headless de Streamlit
 ├── PITCH.md                     ← presentación académica del proyecto
@@ -111,7 +142,7 @@ Proyecto1Especializacion/
 | Herramienta | Versión mínima | Notas |
 |---|---|---|
 | uv | **0.4+** | Gestor de entornos y dependencias. Instalar con `pip install uv` o desde https://docs.astral.sh/uv/ |
-| Python | **3.11** | uv puede instalarlo automáticamente (`uv python install 3.11`) |
+| Python | **3.11+** | Probado en 3.11 – 3.14. uv puede instalarlo automáticamente (`uv python install 3.11`) |
 | Ollama | **0.23+** | Descargar en https://ollama.com |
 
 ---
@@ -129,8 +160,8 @@ El cuello de botella es el LLM local. La app usa dos modelos:
 |---|---|---|
 | RAM | **16 GB** | LLM + Whisper + Streamlit + Python + SO. Con 8 GB hay swap agresivo y la app se vuelve inusable. |
 | CPU | 8 núcleos modernos (i7 / Ryzen 7) | En modo CPU se obtienen **~8–10 tokens/s** del LLM — cada respuesta del agente puede tardar 20–60 s. Whisper transcribe ~1 s por cada 5 s de audio. |
-| Disco | **16 GB libres** | ~5 GB Qwen + ~480 MB Whisper + dependencias Python + bases de datos en LFS. Idealmente SSD. |
-| GPU | Opcional (no requerida) | Si hay GPU NVIDIA con ≥ 6 GB VRAM, Ollama y XGBoost la usan automáticamente. Whisper queda en CPU para no competir por VRAM con el LLM. |
+| Disco | **16 GB libres** | ~4,7 GB Qwen + ~480 MB Whisper + dependencias Python + bases de datos en LFS. Idealmente SSD. |
+| GPU | Opcional (no requerida) | Si hay GPU NVIDIA con ≥ 6 GB VRAM, Ollama la usa automáticamente. Whisper queda en CPU para no competir por VRAM con el LLM. |
 | Micrófono | Opcional | Solo necesario si quieres usar la entrada por voz. La app funciona perfectamente solo con texto. |
 | Navegador | Chrome / Edge / Firefox actualizado | Requerido para el botón de micrófono (usa la API `MediaRecorder`). |
 
@@ -144,7 +175,7 @@ Get-CimInstance Win32_ComputerSystem | Select-Object TotalPhysicalMemory
 nvidia-smi
 ```
 
-Si `nvidia-smi` no está instalado o no detecta GPU, la app igual funciona en CPU — solo será más lenta para el chat y el entrenamiento de XGBoost hará fallback automático a CPU.
+Si `nvidia-smi` no está instalado o no detecta GPU, la app igual funciona en CPU — solo será más lenta para responder en el chat.
 
 ---
 
@@ -179,11 +210,13 @@ ollama pull qwen2.5-coder:7b
 uv run python scripts/download_whisper.py
 ```
 
-Solo es necesario una vez por máquina. El modelo Whisper-small queda cacheado en `~/.cache/huggingface/` y se reutiliza en todas las ejecuciones futuras. Habilita el botón de micrófono en la pestaña de Chat SQL para hacer preguntas por voz.
+Solo es necesario una vez por máquina. El modelo Whisper-small queda cacheado en `~/.cache/huggingface/` y se reutiliza en todas las ejecuciones futuras. Sin este paso, el botón de micrófono aparece en la pestaña de Chat SQL pero la transcripción falla al usarlo.
 
-### 5. Preparar la base de datos y entrenar el modelo
+### 5. Preparar la base de datos y entrenar el modelo experimental
 
-**Opción A — pipeline reproducible (recomendado para re-entrenamiento):**
+> La BD limpia (`Procesos_clean.db`) y los datos crudos vienen incluidos en el repositorio vía **Git LFS**, por lo que la app puede correr inmediatamente después del paso 4 sin ejecutar este paso. Solo es necesario si quieres regenerar la BD desde los CSVs o experimentar con el modelo predictivo.
+
+**Opción A — pipeline reproducible (Ejecución de notebooks):**
 
 ```bash
 uv run python scripts/train_roi_model.py
@@ -193,17 +226,21 @@ Construye el dataset desde `Procesos_clean.db`, entrena XGBoost (GPU si hay CUDA
 
 **Opción B — notebooks paso a paso (recomendado la primera vez para entender el flujo):**
 
+Para abrir los notebooks ejecuta el siguiente comando, que levanta Jupyter Lab usando el entorno del proyecto:
+
 ```bash
 uv run jupyter lab
 ```
 
-Luego abrir en orden:
+Luego abre los notebooks en orden desde la interfaz de Jupyter:
 
 ```
 notebooks/01_preprocesamiento.ipynb   ← genera Procesos_clean.db
 notebooks/02_eda_roi.ipynb            ← EDA y genera data/roi_dataset.csv
 notebooks/03_modelo_roi.ipynb         ← entrena y guarda models/roi_model.joblib
 ```
+
+> **Nota:** el modelo XGBoost (`03_modelo_roi.ipynb` y `scripts/train_roi_model.py`) es exploratorio y **no está integrado en la app**. La calculadora de ROI de la pestaña 3 usa exclusivamente la fórmula determinística.
 
 ---
 
@@ -229,7 +266,7 @@ La primera vez que aprietes el botón **🎤 Grabar pregunta** en la pestaña Ch
 
 ### `uv sync` falla con error de Python
 
-uv intenta usar la versión más reciente de Python que encuentre. Si tienes Python 3.13 o 3.14 instalado pero algunas dependencias (sklearn, pandas) aún no soportan esa versión, fija explícitamente Python 3.11:
+El proyecto está probado en Python 3.11 – 3.14. Si una dependencia aún no soporta tu versión, fija explícitamente 3.11:
 
 ```bash
 uv sync --python 3.11
@@ -257,9 +294,9 @@ En Windows, si instalaste Ollama con el instalador oficial, suele iniciarse auto
 
 Es normal — Streamlit carga el modelo Whisper en RAM la primera vez (~3 s adicionales). A partir de la segunda grabación queda cacheado y la transcripción es de ~1 s para audios de 5 s.
 
-### `nvidia-smi` no se reconoce o XGBoost se queja de CUDA
+### `nvidia-smi` no se reconoce
 
-No tienes drivers NVIDIA o no tienes GPU NVIDIA. **No es un problema** — la app detecta esto y hace fallback automático a CPU para Ollama y XGBoost. Solo serán más lentos.
+No tienes drivers NVIDIA o no tienes GPU NVIDIA. **No es un problema** — la app detecta esto y hace fallback automático a CPU para Ollama. Solo será más lento responder en el chat.
 
 ---
 
@@ -307,9 +344,11 @@ Período cubierto: 2020 – 2024. Los archivos de base de datos están almacenad
 
 ---
 
-## Modelo de ROI
+## Cálculo de ROI
 
-**Fórmula de cálculo:**
+### En producción — fórmula determinística
+
+La app calcula el ROI con una fórmula **auditable, sin caja negra**:
 
 ```
 Beneficio_Bruto = TiempoManual x ValorHora x NumEjecuciones
@@ -330,16 +369,31 @@ ROI%            = (Ahorro_Neto / Costo_Robot) x 100
 
 Este valor reemplaza el factor antiguo (`ValorHora × 0,25`) y se aplica de forma uniforme a todas las soluciones, haciendo comparables los ROIs entre proyectos sin importar el rol que cada bot reemplace.
 
-**Modelo predictivo:** XGBoostRegressor con aceleración GPU (CUDA) y transformación `log1p(ROI)` para manejar la distribución sesgada del target. Detecta automáticamente GPU NVIDIA y hace fallback a CPU.
+### Modelo predictivo (experimental, solo en notebook)
+
+> **Estado:** experimental, **no integrado en la app**. Vive en [`notebooks/03_modelo_roi.ipynb`](notebooks/03_modelo_roi.ipynb) como ejercicio de exploración. La pestaña 3 de la app usa exclusivamente la fórmula determinística descrita arriba.
+
+XGBoostRegressor con transformación `log1p(ROI)` para manejar la distribución sesgada del target.
 
 | Métrica | Valor |
 |---|---|
-| Algoritmo | XGBoost 2.x (`tree_method=hist`, `device=cuda`) |
-| R² (escala log, test split) | ~0.81 |
-| R² CV 5-fold (media ± std) | 0.03 ± 0.27 (alta varianza por n pequeño) |
-| MAE (escala original) | ~2.291% |
+| Algoritmo | XGBoost 2.x (`tree_method=hist`) |
+| R² (escala log, test split) | ~0,81 |
+| R² CV 5-fold (media ± std) | 0,03 ± 0,27 (alta varianza por n pequeño) |
+| MAE (escala original) | ~2.291 puntos porcentuales |
 | Top features | TiempoManualHoras, TasaExito, DuracionPromedio, ValorHora |
-| GPU requerida | RTX 4060 (8 GB VRAM) recomendada, fallback a CPU automático |
 | Muestras de entrenamiento | ~30 bots con datos completos |
 
 > El modelo mejora a medida que se completen los datos de `TiemposManuales` para más bots.
+
+---
+
+## Limitaciones Conocidas
+
+- **Muestra reducida para el modelo predictivo:** solo ~30 bots tienen datos completos en `TiemposManuales`, lo que produce alta varianza en validación cruzada. Por eso el modelo XGBoost queda en estado experimental y la app usa la calculadora determinística.
+- **Hardware local requerido:** la app no funciona sin Ollama corriendo y sin el modelo Qwen descargado (~4,7 GB). No hay despliegue en la nube — todo se ejecuta en la máquina del usuario.
+- **API `MediaRecorder` solo en `localhost` o HTTPS:** si despliegas la app en otra máquina por IP en HTTP, el botón de micrófono fallará silenciosamente.
+- **Latencia del LLM en CPU:** sin GPU, una respuesta del agente SQL puede tardar 20–60 s. Con GPU NVIDIA (≥ 6 GB VRAM) baja a unos pocos segundos.
+- **Costo operativo fijo del robot (7.300 COP/h):** es un promedio basado en la infraestructura actual (Azure + UiPath). Cambios reales en licenciamiento o infraestructura requieren actualizar el valor en la fórmula.
+
+
