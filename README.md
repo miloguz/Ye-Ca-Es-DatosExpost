@@ -249,7 +249,7 @@ En Windows, si instalaste Ollama con el instalador oficial, suele iniciarse auto
 
 ### El botón 🎤 de micrófono no aparece o no graba
 
-- **No aparece:** verifica que la última instalación corrió `uv sync` después de actualizar `pyproject.toml` (debe instalar `streamlit-mic-recorder`).
+- **No aparece:** verifica que tu versión de Streamlit sea ≥ 1.31 (`uv pip show streamlit`). El componente de grabación es nativo (`st.audio_input`), no requiere paquetes adicionales.
 - **Aparece pero no graba:** revisa permisos del navegador. Click en el ícono del candado en la barra de direcciones → permitir micrófono. Recarga la página.
 - **Graba pero no transcribe:** ejecuta `uv run python scripts/download_whisper.py` para asegurarte de que el modelo Whisper-small está descargado. Si la descarga falló por conexión, vuelve a correrlo.
 

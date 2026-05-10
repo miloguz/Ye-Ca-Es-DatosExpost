@@ -62,6 +62,7 @@ def main() -> int:
 
     log.info("Entrenando modelo (XGBoost)...")
     metrics = train(df)
+    metrics.pop("pipeline", None)  # pipeline no es serializable a JSON
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     if args.output != MODEL_PATH:
