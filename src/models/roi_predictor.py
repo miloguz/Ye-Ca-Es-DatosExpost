@@ -44,13 +44,21 @@ TARGET = "ROI_Porcentaje"
 
 
 def _detect_device() -> str:
-    """Detecta si XGBoost puede usar GPU CUDA, retorna 'cuda' o 'cpu'."""
-    try:
-        test = xgb.XGBRegressor(device="cuda", n_estimators=1, verbosity=0)
-        test.fit([[0, 0]], [0])
-        return "cuda"
-    except Exception:
-        return "cpu"
+    """Detecta GPU NVIDIA mediante nvidia-smi sin inicializar contexto CUDA."""
+    import subprocess
+    candidates = [
+        ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"],
+        [r"C:\Program Files\NVIDIA Corporation\NVSMI\nvidia-smi.exe",
+         "--query-gpu=name", "--format=csv,noheader"],
+    ]
+    for cmd in candidates:
+        try:
+            r = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+            if r.returncode == 0 and r.stdout.strip():
+                return "cuda"
+        except Exception:
+            continue
+    return "cpu"
 
 
 def _build_pipeline(device: str = "cpu") -> Pipeline:
@@ -64,6 +72,7 @@ def _build_pipeline(device: str = "cpu") -> Pipeline:
             ),
         ]
     )
+    preprocessor.set_output(transform="default")  # numpy output → compatible con XGBoost 3.x
     estimator = xgb.XGBRegressor(
         n_estimators=300,
         learning_rate=0.05,
@@ -148,7 +157,7 @@ def train(df: pd.DataFrame) -> dict:
     }
 
     joblib.dump({"pipeline": pipeline, "log_transform": True, "device": device}, MODEL_PATH)
-    return metrics
+    return {**metrics, "pipeline": pipeline}
 
 
 def load_model() -> dict:
@@ -160,10 +169,11 @@ def load_model() -> dict:
     return joblib.load(MODEL_PATH)
 
 
-def get_feature_importance(top_n: int = 15) -> pd.DataFrame:
+def get_feature_importance(top_n: int = 15, pipeline=None) -> pd.DataFrame:
     """Retorna importancia de variables del modelo entrenado."""
-    artifact = load_model()
-    pipeline = artifact["pipeline"]
+    if pipeline is None:
+        artifact = load_model()
+        pipeline = artifact["pipeline"]
     model = pipeline.named_steps["model"]
     preprocessor = pipeline.named_steps["preprocessor"]
 

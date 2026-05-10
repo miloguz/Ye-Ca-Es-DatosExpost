@@ -12,7 +12,6 @@ from pathlib import Path
 
 import pandas as pd
 import streamlit as st
-from streamlit_mic_recorder import mic_recorder
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -357,6 +356,45 @@ st.markdown("""<style>
   [data-testid="stSidebar"] [data-testid="stVerticalBlock"] > div {
     gap: 0.25rem !important;
   }
+
+  /* ── Audio input (st.audio_input) — fondo claro, controles visibles ── */
+  [data-testid="stAudioInput"],
+  [data-testid="stAudioInput"] > div,
+  [data-testid="stAudioInput"] section,
+  [data-testid="stAudioInput"] [data-testid="stAudioInputWaveformContainer"],
+  [data-testid="stAudioInput"] [data-testid="stAudioInputWaveformTimeCode"] {
+    background-color: var(--cfm-tertiary-bg) !important;
+    border-radius: 8px !important;
+  }
+  [data-testid="stAudioInput"] {
+    border: 1px solid var(--cfm-border) !important;
+    padding: 0.25rem !important;
+  }
+  /* Botón de grabar/detener — circular, color de marca */
+  [data-testid="stAudioInput"] button {
+    background-color: var(--cfm-primary) !important;
+    color: var(--cfm-white) !important;
+    border: none !important;
+  }
+  [data-testid="stAudioInput"] button:hover {
+    background-color: var(--cfm-primary-dark) !important;
+  }
+  [data-testid="stAudioInput"] button svg,
+  [data-testid="stAudioInput"] button path {
+    fill: var(--cfm-white) !important;
+    stroke: var(--cfm-white) !important;
+    color: var(--cfm-white) !important;
+  }
+  /* Texto del temporizador */
+  [data-testid="stAudioInput"] [data-testid="stAudioInputWaveformTimeCode"],
+  [data-testid="stAudioInput"] span,
+  [data-testid="stAudioInput"] p {
+    color: var(--cfm-navy) !important;
+  }
+  /* Forma de onda del audio grabado */
+  [data-testid="stAudioInput"] canvas {
+    background-color: var(--cfm-tertiary-bg) !important;
+  }
 </style>
 """, unsafe_allow_html=True)
 
@@ -462,30 +500,25 @@ with tab_chat:
                 df_display = pd.DataFrame(msg["data"], columns=msg["columns"])
                 st.dataframe(df_display, use_container_width=True, hide_index=True)
 
-    # Entrada por voz (opcional)
-    col_mic, col_hint = st.columns([1, 4])
+    # Entrada por voz (opcional) — usa componente nativo de Streamlit
+    col_mic, col_hint = st.columns([2, 3])
     with col_mic:
-        audio = mic_recorder(
-            start_prompt="🎤 Grabar pregunta",
-            stop_prompt="⏹️ Detener",
-            just_once=False,
-            use_container_width=True,
-            format="wav",
-            key="mic_chat",
-        )
+        audio = st.audio_input("🎤 Graba tu pregunta", key="mic_chat")
     with col_hint:
         st.caption(
-            "Habla tu pregunta en español. Al detener, se transcribe localmente "
+            "Habla en español. Al detener la grabación, se transcribe localmente "
             "con Whisper y se envía al agente SQL."
         )
 
     voice_prompt = None
-    if audio and audio.get("bytes"):
-        if audio.get("id") != st.session_state.get("last_audio_id"):
-            st.session_state["last_audio_id"] = audio.get("id")
+    if audio is not None:
+        audio_bytes = audio.getvalue()
+        audio_hash = hash(audio_bytes)
+        if audio_hash != st.session_state.get("last_audio_hash"):
+            st.session_state["last_audio_hash"] = audio_hash
             with st.spinner("Transcribiendo audio..."):
                 try:
-                    voice_prompt = transcribe_audio(audio["bytes"])
+                    voice_prompt = transcribe_audio(audio_bytes)
                 except Exception as exc:
                     st.error(f"Error al transcribir: {exc}")
                     voice_prompt = None
