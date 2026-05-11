@@ -52,6 +52,8 @@ class PDF(FPDF):
         self.set_font("Helvetica", "", 8)
         self.set_xy(140, 4)
         self.cell(0, 10, "Guia de instalacion y ejecucion", align="R")
+        # Reposition cursor below the header bar so content never overlaps it
+        self.set_xy(self.l_margin, self.t_margin)
 
     def footer(self):
         self.set_y(-12)
@@ -63,6 +65,9 @@ class PDF(FPDF):
         self.cell(0, 5, f"Pagina {self.page_no()}", align="C")
 
     def section_title(self, text):
+        # Si quedan menos de 35mm en la pagina, saltar para evitar titulos huerfanos
+        if self.h - self.b_margin - self.get_y() < 35:
+            self.add_page()
         self.ln(4)
         self.set_fill_color(*PRIMARY)
         self.set_text_color(*WHITE)
@@ -88,9 +93,12 @@ class PDF(FPDF):
     def code_block(self, lines):
         self.set_font("Courier", "", 9)
         x = 10
-        y = self.get_y()
         padding = 3
         total_h = len(lines) * 5 + padding * 2
+        # Saltar a la siguiente pagina si el bloque no cabe en la actual
+        if self.get_y() + total_h > self.h - self.b_margin:
+            self.add_page()
+        y = self.get_y()
         self.set_fill_color(*NAVY)
         self.rect(x, y, 190, total_h, "F")
         # Borde izquierdo magenta para acento de marca
@@ -162,25 +170,27 @@ pdf.set_font("Helvetica", "", 10)
 pdf.multi_cell(
     0, 6,
     "Este documento describe como clonar, configurar y ejecutar el proyecto "
-    "de analisis de procesos RPA con agente SQL local (Ollama) y prediccion "
-    "de ROI (XGBoost + GPU) en cualquier equipo con Windows, macOS o Linux.",
+    "de analisis de procesos RPA con agente SQL local (Ollama + Qwen 2.5 Coder), "
+    "entrada por voz (Whisper) y calculadora deterministica de ROI en cualquier "
+    "equipo con Windows, macOS o Linux.",
 )
 
 # ── Requisitos previos ────────────────────────────────────────────────────────
 pdf.section_title("1. Requisitos previos")
 pdf.table_row(["Herramienta", "Version minima", "Descarga"], [48, 34, 108], header=True)
 reqs = [
-    ("Python",       "3.11",      "https://python.org/downloads"),
-    ("Git",          "cualquier", "https://git-scm.com"),
-    ("Git LFS",      "cualquier", "https://git-lfs.github.com"),
-    ("Ollama",       "0.23+",     "https://ollama.com/download"),
-    ("CUDA Toolkit", "12.x (op)", "https://developer.nvidia.com/cuda-downloads"),
+    ("Git",     "2.30+", "https://git-scm.com"),
+    ("Git LFS", "3.0+",  "https://git-lfs.github.com"),
+    ("uv",      "0.4+",  "https://docs.astral.sh/uv"),
+    ("Python",  "3.11+", "https://python.org/downloads"),
+    ("Ollama",  "0.23+", "https://ollama.com/download"),
 ]
 for row in reqs:
     pdf.table_row(list(row), [48, 34, 108])
 pdf.ln(2)
 pdf.note(
-    "GPU NVIDIA es opcional. XGBoost detecta CUDA y hace fallback a CPU automaticamente."
+    "GPU NVIDIA es opcional. Ollama detecta CUDA y hace fallback a CPU automaticamente. "
+    "uv puede instalar Python 3.11 por ti si aun no lo tienes."
 )
 
 # ── Paso 2 ────────────────────────────────────────────────────────────────────
@@ -215,17 +225,27 @@ pdf.code_block([
 ])
 
 # ── Paso 4 ────────────────────────────────────────────────────────────────────
-pdf.section_title("4. Instalar dependencias Python")
-pdf.body("Opcion A - con uv (recomendado, resuelve el entorno automaticamente):")
-pdf.code_block(["pip install uv", "uv sync"])
-pdf.body("Opcion B - con pip estandar:")
-pdf.code_block([
-    "pip install streamlit ollama plotly xgboost joblib pandas \\",
-    "            scikit-learn seaborn matplotlib numpy",
-])
+pdf.section_title("4. Instalar uv (si no lo tienes)")
+pdf.body(
+    "uv es el gestor de entornos y dependencias del proyecto. Si aun no esta "
+    "instalado en tu maquina, ejecuta:"
+)
+pdf.code_block(["pip install uv"])
+pdf.note(
+    "Alternativa oficial (instalador independiente de Python): "
+    "https://docs.astral.sh/uv/"
+)
 
 # ── Paso 5 ────────────────────────────────────────────────────────────────────
-pdf.section_title("5. Instalar Ollama y descargar el modelo LLM")
+pdf.section_title("5. Instalar dependencias con uv")
+pdf.body(
+    "Crea un entorno virtual aislado en .venv/ e instala todas las dependencias "
+    "declaradas en pyproject.toml / uv.lock:"
+)
+pdf.code_block(["uv sync"])
+
+# ── Paso 6 ────────────────────────────────────────────────────────────────────
+pdf.section_title("6. Instalar Ollama y descargar el modelo LLM")
 pdf.body(
     "El agente SQL necesita Ollama corriendo localmente y el modelo "
     "qwen2.5-coder:7b (~4.7 GB)."
@@ -242,70 +262,101 @@ pdf.note(
     "No es necesario 'ollama serve' de forma manual."
 )
 
-# ── Paso 6 ────────────────────────────────────────────────────────────────────
-pdf.section_title("6. Entrenar el modelo de prediccion de ROI")
+# ── Paso 7 ────────────────────────────────────────────────────────────────────
+pdf.section_title("7. Descargar el modelo Whisper (entrada por voz, ~480 MB)")
 pdf.body(
-    "El archivo models/roi_model.joblib NO esta en el repositorio (figura en .gitignore).\n"
-    "Hay que generarlo una vez antes de usar la pestana 'Prediccion ROI':"
+    "Whisper-small transcribe la voz a texto localmente y habilita el boton de "
+    "microfono en la pestana de Chat SQL. Sin este paso el boton aparece pero "
+    "la transcripcion falla al usarlo."
 )
-pdf.code_block([
-    "python -c \"",
-    "import sys; sys.path.insert(0, '.')",
-    "from src.utils.roi_calculator import build_roi_dataset",
-    "from src.models.roi_predictor import train",
-    "metrics = train(build_roi_dataset())",
-    "print('Dispositivo:', metrics['device'].upper())",
-    "print('Modelo guardado en models/roi_model.joblib')",
-    "\"",
-])
+pdf.code_block(["uv run python scripts/download_whisper.py"])
 pdf.note(
-    "Con GPU NVIDIA y CUDA instalado, el entrenamiento usa la GPU automaticamente."
+    "Solo es necesario una vez por maquina. El modelo queda cacheado en "
+    "~/.cache/huggingface/ y se reutiliza en todas las ejecuciones futuras."
 )
 
-# ── Paso 7 ────────────────────────────────────────────────────────────────────
-pdf.section_title("7. Ejecutar la aplicacion")
+# ── Paso 8 ────────────────────────────────────────────────────────────────────
+pdf.section_title("8. (Opcional) Entrenar el modelo experimental de ROI")
+pdf.body(
+    "La BD limpia y los datos crudos vienen incluidos vía Git LFS, asi que la "
+    "app puede correr inmediatamente despues del paso 7. Este paso solo es "
+    "necesario si quieres explorar el modelo predictivo en notebooks."
+)
+pdf.code_block([
+    "# Opcion A - pipeline reproducible",
+    "uv run python scripts/train_roi_model.py",
+    "",
+    "# Opcion B - notebooks paso a paso",
+    "uv run jupyter lab",
+])
+pdf.note(
+    "El modelo XGBoost (notebook 03 y train_roi_model.py) es exploratorio y NO "
+    "esta integrado en la app. La Calculadora de ROI usa exclusivamente la "
+    "formula deterministica."
+)
+
+# ── Paso 9 ────────────────────────────────────────────────────────────────────
+pdf.section_title("9. Ejecutar la aplicacion")
 pdf.code_block([
     "# Opcion A - script rapido (solo Windows)",
     "run_app.bat",
     "",
     "# Opcion B - manual (Windows / macOS / Linux)",
-    "streamlit run app/chat.py",
+    "uv run streamlit run app/chat.py",
 ])
 pdf.body("Abrir en el navegador:  http://localhost:8501")
 
 # ── Solucion de problemas ─────────────────────────────────────────────────────
-pdf.section_title("8. Solucion de problemas comunes")
+pdf.section_title("10. Solucion de problemas comunes")
 pdf.table_row(["Sintoma", "Causa probable", "Solucion"], [65, 55, 68], header=True)
 issues = [
     ("Bases de datos vacias (0 bytes)", "Git LFS no instalado",       "git lfs install && git lfs pull"),
-    ("ModuleNotFoundError: streamlit",  "Deps no instaladas",          "pip install streamlit  o  uv sync"),
+    ("ModuleNotFoundError al correr",   "Deps no instaladas",          "uv sync en la raiz del proyecto"),
     ("'Ollama no esta corriendo'",      "Servidor Ollama apagado",     "ollama serve en terminal aparte"),
-    ("Prediccion ROI falla al cargar",  "Modelo no entrenado",         "Ejecutar el paso 6"),
-    ("XGBoost no detecta GPU",          "CUDA Toolkit no instalado",   "Instalar CUDA; fallback CPU automatico"),
+    ("Boton de microfono no transcribe", "Modelo Whisper no descargado", "Ejecutar el paso 7"),
+    ("Ollama no usa la GPU",            "CUDA Toolkit no instalado",   "Instalar CUDA; fallback CPU automatico"),
 ]
 for row in issues:
     pdf.table_row(list(row), [65, 55, 68])
 
 # ── Estructura del proyecto ───────────────────────────────────────────────────
-pdf.section_title("9. Estructura del proyecto")
+# El bloque de estructura mide ~120mm; si no cabe, mejor partir la pagina antes
+# del titulo para que no quede huerfano al final de la pagina anterior.
+estructura_lines = 22
+estructura_block_h = estructura_lines * 5 + 6 + 18  # contenido + titulo + paddings
+if pdf.get_y() + estructura_block_h > pdf.h - pdf.b_margin:
+    pdf.add_page()
+pdf.section_title("11. Estructura del proyecto")
 pdf.set_font("Courier", "", 8.5)
 estructura = [
     "Proyecto1Especializacion/",
-    "  app/chat.py                    <- streamlit run app/chat.py",
+    "  app/chat.py                    <- Streamlit: Chat SQL / ROI / Calculadora",
     "  assets/logo.svg                <- logo Sinfama",
     "  src/",
     "    agent/                       <- agente SQL + conexion DB",
-    "    models/roi_predictor.py      <- XGBoost GPU/CPU",
-    "    utils/roi_calculator.py      <- calculo de ROI",
-    "  data/database/",
-    "    Procesos_clean.db            <- base de datos (Git LFS)",
-    "  models/                        <- roi_model.joblib (generado local)",
-    "  notebooks/                     <- EDA y entrenamiento paso a paso",
+    "    models/roi_predictor.py      <- (experimental) XGBoost",
+    "    utils/roi_calculator.py      <- calculo deterministico de ROI",
+    "  data/",
+    "    raw/                         <- CSVs originales (Git LFS)",
+    "    database/Procesos_clean.db   <- BD limpia (Git LFS)",
+    "  notebooks/",
+    "    01_preprocesamiento.ipynb    <- limpieza y normalizacion",
+    "    02_eda_roi.ipynb             <- EDA enfocado en ROI",
+    "    03_modelo_roi.ipynb          <- (experimental) entrenamiento XGBoost",
+    "  scripts/",
+    "    csv_to_sqlite.py             <- CSVs -> Procesos.db",
+    "    train_roi_model.py           <- (experimental) pipeline XGBoost",
+    "    download_whisper.py          <- pre-descarga modelo Whisper",
+    "  models/                        <- (experimental) roi_model.joblib",
     "  run_app.bat                    <- acceso rapido Windows",
     "  pyproject.toml                 <- dependencias del proyecto",
 ]
-x, y = 10, pdf.get_y()
+x = 10
 h = len(estructura) * 5 + 6
+# Saltar a la siguiente pagina si el bloque no cabe en la actual
+if pdf.get_y() + h > pdf.h - pdf.b_margin:
+    pdf.add_page()
+y = pdf.get_y()
 pdf.set_fill_color(*NAVY)
 pdf.rect(x, y, 190, h, "F")
 pdf.set_fill_color(*PRIMARY)
@@ -328,7 +379,7 @@ pdf.set_text_color(*BLACK)
 pdf.ln(4)
 
 # ── Formula ROI ───────────────────────────────────────────────────────────────
-pdf.section_title("10. Formula de calculo de ROI")
+pdf.section_title("12. Formula de calculo de ROI")
 pdf.code_block([
     "Beneficio_Bruto = TiempoManual x ValorHora x NumEjecuciones",
     "Costo_Robot     = DuracionRobot x 7300 x NumEjecuciones",
@@ -336,6 +387,9 @@ pdf.code_block([
     "ROI%            = (Ahorro_Neto / Costo_Robot) x 100",
 ])
 pdf.body(
+    "La pestana 'Calculadora de ROI' de la app usa exclusivamente esta formula\n"
+    "deterministica, auditable y sin caja negra.\n"
+    "\n"
     "El costo operativo del robot se estandariza en 7.300 COP/hora para todas las\n"
     "soluciones del portafolio. Este valor proviene de la infraestructura real:\n"
     "  - Servidor Azure:                       150.000 COP/mes\n"
@@ -345,8 +399,9 @@ pdf.body(
     "Aplicar una tarifa uniforme hace comparables los ROIs entre proyectos sin\n"
     "importar el rol que cada bot reemplace.\n"
     "\n"
-    "El modelo predictivo (XGBoost) aplica transformacion log1p(ROI) antes de\n"
-    "entrenar para manejar la distribucion sesgada del target."
+    "El modelo predictivo experimental (XGBoost, notebook 03) aplica\n"
+    "transformacion log1p(ROI) antes de entrenar para manejar la distribucion\n"
+    "sesgada del target. NO esta integrado en la app."
 )
 
 pdf.output(str(OUT))
