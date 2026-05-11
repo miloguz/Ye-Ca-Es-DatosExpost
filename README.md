@@ -141,6 +141,8 @@ Proyecto1Especializacion/
 
 | Herramienta | Versión mínima | Notas |
 |---|---|---|
+| Git | **2.30+** | Para clonar el repositorio. Descargar en https://git-scm.com |
+| Git LFS | **3.0+** | Requerido para descargar las bases de datos del repositorio. Instalar con `winget install GitHub.GitLFS` / `brew install git-lfs` / `apt-get install git-lfs` |
 | uv | **0.4+** | Gestor de entornos y dependencias. Instalar con `pip install uv` o desde https://docs.astral.sh/uv/ |
 | Python | **3.11+** | Probado en 3.11 – 3.14. uv puede instalarlo automáticamente (`uv python install 3.11`) |
 | Ollama | **0.23+** | Descargar en https://ollama.com |
@@ -181,14 +183,47 @@ Si `nvidia-smi` no está instalado o no detecta GPU, la app igual funciona en CP
 
 ## Instalación
 
-### 1. Clonar el repositorio
+### 1. Instalar Git LFS
+
+Las bases de datos (`Procesos.db`, `Procesos_clean.db`) y los CSVs crudos están almacenados en **Git LFS**, así que es necesario instalarlo **antes** de clonar el repositorio para que los archivos se descarguen correctamente.
+
+```bash
+# Windows (con winget)
+winget install GitHub.GitLFS
+
+# macOS (con Homebrew)
+brew install git-lfs
+
+# Linux (Debian/Ubuntu)
+sudo apt-get install git-lfs
+```
+
+Luego, una sola vez por máquina, habilita LFS en tu usuario:
+
+```bash
+git lfs install
+```
+
+> Si ya clonaste el repositorio **antes** de instalar Git LFS, ejecuta `git lfs pull` dentro de la carpeta del proyecto para descargar los archivos faltantes.
+
+### 2. Clonar el repositorio
 
 ```bash
 git clone <url-del-repositorio>
 cd Proyecto1Especializacion
 ```
 
-### 2. Instalar dependencias con uv
+### 3. Instalar uv (si no lo tienes)
+
+`uv` es el gestor de entornos y dependencias del proyecto. Si aún no lo tienes instalado:
+
+```bash
+pip install uv
+```
+
+> Alternativa oficial (independiente de Python): instaladores en [docs.astral.sh/uv](https://docs.astral.sh/uv/).
+
+### 4. Instalar dependencias con uv
 
 ```bash
 uv sync
@@ -196,7 +231,7 @@ uv sync
 
 Esto crea un entorno virtual aislado en `.venv/` e instala todas las dependencias declaradas en `pyproject.toml` / `uv.lock`.
 
-### 3. Instalar y configurar Ollama
+### 5. Instalar y configurar Ollama
 
 ```bash
 # Descargar desde https://ollama.com/download
@@ -204,7 +239,7 @@ Esto crea un entorno virtual aislado en `.venv/` e instala todas las dependencia
 ollama pull qwen2.5-coder:7b
 ```
 
-### 4. Descargar el modelo de transcripción de voz (~480 MB)
+### 6. Descargar el modelo de transcripción de voz (~480 MB)
 
 ```bash
 uv run python scripts/download_whisper.py
@@ -212,9 +247,9 @@ uv run python scripts/download_whisper.py
 
 Solo es necesario una vez por máquina. El modelo Whisper-small queda cacheado en `~/.cache/huggingface/` y se reutiliza en todas las ejecuciones futuras. Sin este paso, el botón de micrófono aparece en la pestaña de Chat SQL pero la transcripción falla al usarlo.
 
-### 5. Preparar la base de datos y entrenar el modelo experimental
+### 7. Preparar la base de datos y entrenar el modelo experimental
 
-> La BD limpia (`Procesos_clean.db`) y los datos crudos vienen incluidos en el repositorio vía **Git LFS**, por lo que la app puede correr inmediatamente después del paso 4 sin ejecutar este paso. Solo es necesario si quieres regenerar la BD desde los CSVs o experimentar con el modelo predictivo.
+> La BD limpia (`Procesos_clean.db`) y los datos crudos vienen incluidos en el repositorio vía **Git LFS**, por lo que la app puede correr inmediatamente después del paso 6 sin ejecutar este paso. Solo es necesario si quieres regenerar la BD desde los CSVs o experimentar con el modelo predictivo.
 
 **Opción A — pipeline reproducible (Ejecución de notebooks):**
 

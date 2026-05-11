@@ -22,3 +22,8 @@ dependencies = [
 
 [project.scripts]
 app = "app.chat:main"
+
+[dependency-groups]
+dev = [
+    "fpdf2>=2.8.7",
+]
