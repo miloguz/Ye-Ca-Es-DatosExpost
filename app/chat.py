@@ -6,7 +6,10 @@ Iniciar:
     streamlit run app/chat.py
 """
 
+import asyncio
+import base64
 import io
+import re
 import sys
 from pathlib import Path
 
@@ -35,6 +38,82 @@ def transcribe_audio(audio_bytes: bytes) -> str:
         io.BytesIO(audio_bytes), language="es", beam_size=5
     )
     return " ".join(seg.text for seg in segments).strip()
+
+
+TTS_VOICE = "es-CO-SalomeNeural"  # colombiana femenina; alternativa: es-CO-GonzaloNeural
+
+
+def _tts_available() -> tuple[bool, str]:
+    """Retorna (disponible, mensaje) según si edge-tts está instalado."""
+    try:
+        import edge_tts  # noqa: F401, PLC0415
+        return True, f"🔊 Edge TTS · {TTS_VOICE}"
+    except ImportError:
+        return False, "🔇 edge-tts no instalado (ejecuta: uv sync)"
+
+
+def _strip_md(text: str) -> str:
+    """Elimina marcas Markdown antes de sintetizar voz."""
+    text = re.sub(r"```[\s\S]*?```", " ", text)
+    text = re.sub(r"`([^`]+)`", r"\1", text)
+    text = re.sub(r"\*\*(.+?)\*\*", r"\1", text)
+    text = re.sub(r"\*(.+?)\*", r"\1", text)
+    text = re.sub(r"^#{1,6}\s+", "", text, flags=re.MULTILINE)
+    text = re.sub(r"^\s*[-*•]\s+", "", text, flags=re.MULTILINE)
+    text = re.sub(r"\[(.+?)\]\(.+?\)", r"\1", text)
+    return re.sub(r"\n{3,}", "\n\n", text).strip()
+
+
+def synthesize_speech(text: str) -> bytes | None:
+    """Genera bytes MP3 usando Microsoft Edge TTS con voz colombiana."""
+    try:
+        import edge_tts  # noqa: PLC0415
+
+        async def _synth() -> bytes:
+            communicate = edge_tts.Communicate(_strip_md(text), TTS_VOICE)
+            audio_data = bytearray()
+            async for chunk in communicate.stream():
+                if chunk["type"] == "audio":
+                    audio_data.extend(chunk["data"])
+            return bytes(audio_data)
+
+        loop = asyncio.new_event_loop()
+        try:
+            return loop.run_until_complete(_synth())
+        finally:
+            loop.close()
+    except Exception:
+        return None
+
+
+def audio_play_button(audio_bytes: bytes, key: str) -> None:
+    """Botón play/pause con audio MP3 embebido — sin barra de progreso."""
+    b64 = base64.b64encode(audio_bytes).decode()
+    html = f"""
+    <audio id="a_{key}" src="data:audio/mpeg;base64,{b64}" preload="auto"></audio>
+    <button id="b_{key}"
+      onclick="(function(){{
+        var a=document.getElementById('a_{key}');
+        var b=document.getElementById('b_{key}');
+        if(a.paused){{
+          a.play();
+          b.innerHTML='&#9646;&#9646;&nbsp; Pausar';
+        }}else{{
+          a.pause();
+          b.innerHTML='&#9654;&nbsp; Escuchar respuesta';
+        }}
+        a.onended=function(){{b.innerHTML='&#9654;&nbsp; Escuchar respuesta';}};
+      }})()"
+      style="background:#db0061;color:#fff;border:none;border-radius:999px;
+             padding:0.35rem 1.1rem;font-family:'Roboto',sans-serif;font-weight:600;
+             font-size:0.82rem;cursor:pointer;margin-top:6px;
+             transition:background 0.2s;"
+      onmouseover="this.style.background='#8a0051'"
+      onmouseout="this.style.background='#db0061'"
+    >&#9654;&nbsp; Escuchar respuesta</button>
+    """
+    st.components.v1.html(html, height=52)
+
 
 # ── Logo ──────────────────────────────────────────────────────────────────────
 LOGO_SVG = (Path(__file__).parent.parent / "assets" / "logo.svg").read_text(encoding="utf-8")
@@ -395,6 +474,7 @@ st.markdown("""<style>
   [data-testid="stAudioInput"] canvas {
     background-color: var(--cfm-tertiary-bg) !important;
   }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -467,6 +547,11 @@ with st.sidebar:
         st.metric("Ahorro", f"${ahorro_m:,.0f}M")
         st.caption(f"Top: **{s['mejor_bot']}**")
 
+    # Estado TTS
+    st.markdown('<p style="margin:0.6rem 0 0.1rem; font-size:0.75rem; color:#b7bad1; font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">Voz TTS</p>', unsafe_allow_html=True)
+    _tts_ok, _tts_msg = _tts_available()
+    st.caption(_tts_msg)
+
     st.markdown('<div style="margin-top:0.5rem;"></div>', unsafe_allow_html=True)
     if st.button("Limpiar conversación", use_container_width=True):
         st.session_state["messages"] = []
@@ -490,7 +575,7 @@ with tab_chat:
         st.session_state["messages"] = []
 
     # Historial de mensajes
-    for msg in st.session_state["messages"]:
+    for i, msg in enumerate(st.session_state["messages"]):
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
             if msg.get("sql"):
@@ -499,6 +584,8 @@ with tab_chat:
             if msg.get("data") and msg.get("columns"):
                 df_display = pd.DataFrame(msg["data"], columns=msg["columns"])
                 st.dataframe(df_display, use_container_width=True, hide_index=True)
+            if msg["role"] == "assistant" and msg.get("audio"):
+                audio_play_button(msg["audio"], key=f"h{i}")
 
     # Entrada por voz (opcional) — usa componente nativo de Streamlit
     col_mic, col_hint = st.columns([2, 3])
@@ -555,6 +642,14 @@ with tab_chat:
                 df_result = pd.DataFrame(result["data"], columns=result["columns"])
                 st.dataframe(df_result, use_container_width=True, hide_index=True)
 
+            # Síntesis de voz TTS
+            audio_bytes = None
+            if _tts_available()[0]:
+                with st.spinner("Sintetizando audio..."):
+                    audio_bytes = synthesize_speech(result["response"])
+            if audio_bytes:
+                audio_play_button(audio_bytes, key=f"n{len(st.session_state['messages'])}")
+
         st.session_state["messages"].append(
             {
                 "role": "assistant",
@@ -562,6 +657,7 @@ with tab_chat:
                 "sql": result.get("sql"),
                 "data": result.get("data"),
                 "columns": result.get("columns"),
+                "audio": audio_bytes,
             }
         )
 
