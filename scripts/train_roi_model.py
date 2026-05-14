@@ -60,9 +60,10 @@ def main() -> int:
     df = build_roi_dataset()
     log.info("Dataset: %d filas, %d columnas", len(df), df.shape[1])
 
-    log.info("Entrenando modelo (XGBoost)...")
+    log.info("Entrenando modelo (XGBoost + baseline Ridge + bootstrap CI)...")
     metrics = train(df)
-    metrics.pop("pipeline", None)  # pipeline no es serializable a JSON
+    metrics.pop("pipeline", None)        # pipeline no es serializable a JSON
+    metrics.pop("baseline_pipeline", None)
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     if args.output != MODEL_PATH:
@@ -72,9 +73,14 @@ def main() -> int:
     args.metrics_out.write_text(json.dumps(metrics, indent=2, default=str), encoding="utf-8")
 
     log.info("Dispositivo: %s", metrics["device"].upper())
-    log.info("R² (log-scale, test): %.3f", metrics["r2"])
-    log.info("R² CV %d-fold: %.3f ± %.3f", 5, metrics["cv_r2_mean"], metrics["cv_r2_std"])
-    log.info("MAE (escala original): %.0f%%", metrics["mae_pct"])
+    log.info("n_total=%d  n_train=%d  n_test=%d", metrics["n_total"], metrics["n_train"], metrics["n_test"])
+    log.info("XGBoost ─ R² (log, test): %.3f  [CI95: %.3f, %.3f]",
+             metrics["r2"], metrics["r2_test_ci95_low"], metrics["r2_test_ci95_high"])
+    log.info("XGBoost ─ R² CV-5: %.3f ± %.3f", metrics["cv_r2_mean"], metrics["cv_r2_std"])
+    log.info("XGBoost ─ MAE: %.0f%%  [CI95: %.0f, %.0f]",
+             metrics["mae_pct"], metrics["mae_test_ci95_low"], metrics["mae_test_ci95_high"])
+    log.info("Baseline Ridge ─ R² (test): %.3f   CV-5: %.3f ± %.3f",
+             metrics["baseline_r2"], metrics["baseline_cv_r2_mean"], metrics["baseline_cv_r2_std"])
     log.info("Modelo guardado en: %s", args.output)
     log.info("Métricas guardadas en: %s", args.metrics_out)
     return 0

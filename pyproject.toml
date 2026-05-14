@@ -19,12 +19,14 @@ dependencies = [
     "nbformat>=5.10.0",
     "faster-whisper>=1.0.0",
     "edge-tts>=6.1.9",
+    "piper-tts>=1.2.0",
 ]
 
 [project.scripts]
-app = "app.chat:main"
+sinfama-app = "app.__main__:main"
 
 [dependency-groups]
 dev = [
     "fpdf2>=2.8.7",
+    "nbconvert>=7.17.1",
 ]

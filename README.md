@@ -29,6 +29,7 @@ Pipeline completo de datos para el análisis del portafolio de automatizaciones 
 - [Ejecución](#ejecución)
 - [Solución de Problemas](#solución-de-problemas)
 - [Funcionalidades](#funcionalidades)
+- [Síntesis de Voz (TTS)](#síntesis-de-voz-tts)
 - [Datos](#datos)
 - [Cálculo de ROI](#cálculo-de-roi)
 - [Limitaciones Conocidas](#limitaciones-conocidas)
@@ -46,10 +47,12 @@ El proyecto integra tres fuentes de datos sobre automatizaciones RPA (`Registros
 
 ### Modelos de IA utilizados
 
-El proyecto corre **dos modelos de IA 100% locales**, sin enviar datos a la nube:
+El proyecto integra **tres componentes de IA** para lograr una experiencia conversacional completa:
 
-- **Qwen 2.5 Coder 7B** (vía Ollama) — LLM especializado en código que convierte preguntas en lenguaje natural a consultas SQL, las ejecuta sobre la base de datos SQLite y narra la respuesta en español.
-- **Whisper-small** (vía faster-whisper) — Modelo de transcripción de voz a texto en español, optimizado para CPU.
+- **Qwen 2.5 Coder 7B** (vía Ollama) — LLM especializado en código que convierte preguntas en lenguaje natural a consultas SQL, las ejecuta sobre la base de datos SQLite y narra la respuesta en español. Corre **100% local**.
+- **Whisper-small** (vía faster-whisper) — Modelo de transcripción de voz a texto en español, optimizado para CPU. Corre **100% local**.
+- **Piper TTS** (`es_MX-ald-medium`) — Síntesis de voz neuronal **100% local** con voz en español latinoamericano. Se activa automáticamente si descargas el modelo ONNX vía `scripts/download_piper.py`.
+- **Edge TTS** (`es-CO-SalomeNeural`) — Fallback en la nube con voz colombiana femenina si Piper no está disponible. Requiere internet (ver [Síntesis de Voz (TTS)](#síntesis-de-voz-tts)).
 
 ### Interfaz de chat con preguntas directas
 
@@ -90,11 +93,26 @@ Whisper-small        │
         └───────┬────────────────┘
                 ▼
         Respuesta en español + tabla de resultados
+                │
+                ▼
+        ¿Modelo Piper local disponible?
+          ┌─────┴─────┐
+         sí           no
+          │           │
+          ▼           ▼
+   Piper TTS     Edge TTS (nube)
+   (ONNX local)  (Microsoft)
+          │           │
+          └─────┬─────┘
+                ▼
+      🔊 Reproducción de audio en el navegador
 ```
 
-**Dos modelos de IA, 100% locales:**
-- **Whisper-small** transcribe la voz del usuario a texto en español (~480 MB, corre en CPU).
-- **Qwen 2.5 Coder 7B** convierte el texto en SQL, lo ejecuta y narra la respuesta (~4,7 GB, corre en GPU si está disponible).
+**Componentes de IA:**
+- **Whisper-small** transcribe la voz del usuario a texto en español (~480 MB, corre en CPU, **local**).
+- **Qwen 2.5 Coder 7B** convierte el texto en SQL, lo ejecuta y narra la respuesta (~4,7 GB, corre en GPU si está disponible, **local**).
+- **Piper TTS** (`es_MX-ald-medium`) sintetiza la respuesta en CPU sin internet (~60 MB, **local**). Se activa si descargas el modelo ONNX.
+- **Edge TTS** (`es-CO-SalomeNeural`) es el fallback en la nube cuando Piper no está descargado. Requiere internet.
 
 ---
 
@@ -121,13 +139,16 @@ Proyecto1Especializacion/
 ├── scripts/
 │   ├── csv_to_sqlite.py         ← convierte CSVs fuente a Procesos.db
 │   ├── train_roi_model.py       ← (experimental) pipeline XGBoost (db → train → save)
-│   └── download_whisper.py      ← pre-descarga el modelo Whisper-small (~480 MB)
+│   ├── download_whisper.py      ← pre-descarga el modelo Whisper-small (~480 MB)
+│   └── download_piper.py        ← pre-descarga el modelo Piper TTS es_MX-ald-medium (~60 MB)
 ├── data/
 │   ├── raw/                     ← archivos CSV originales (Git LFS)
 │   └── database/
 │       ├── Procesos.db          ← BD original (Git LFS)
 │       └── Procesos_clean.db    ← BD limpia y preprocesada (Git LFS)
-├── models/                      ← (experimental) roi_model.joblib
+├── models/
+│   ├── tts/                     ← modelo Piper TTS (generado por download_piper.py)
+│   └── roi_model.joblib         ← (experimental) modelo XGBoost serializado
 ├── reports/                     ← figuras (notebooks) y métricas JSON (pipeline)
 ├── .streamlit/config.toml       ← configuración headless de Streamlit
 ├── PITCH.md                     ← presentación académica del proyecto
@@ -247,6 +268,14 @@ uv run python scripts/download_whisper.py
 
 Solo es necesario una vez por máquina. El modelo Whisper-small queda cacheado en `~/.cache/huggingface/` y se reutiliza en todas las ejecuciones futuras. Sin este paso, el botón de micrófono aparece en la pestaña de Chat SQL pero la transcripción falla al usarlo.
 
+### 6b. (Opcional pero recomendado) Descargar el modelo Piper TTS (~60 MB)
+
+```bash
+uv run python scripts/download_piper.py
+```
+
+Activa la **síntesis de voz local** para que la app pueda leer en voz alta las respuestas del agente sin internet. Si omites este paso, la app usa Edge TTS (Microsoft, en la nube) y necesita conexión.
+
 ### 7. Preparar la base de datos y entrenar el modelo experimental
 
 > La BD limpia (`Procesos_clean.db`) y los datos crudos vienen incluidos en el repositorio vía **Git LFS**, por lo que la app puede correr inmediatamente después del paso 6 sin ejecutar este paso. Solo es necesario si quieres regenerar la BD desde los CSVs o experimentar con el modelo predictivo.
@@ -261,19 +290,27 @@ Construye el dataset desde `Procesos_clean.db`, entrena XGBoost (GPU si hay CUDA
 
 **Opción B — notebooks paso a paso (recomendado la primera vez para entender el flujo):**
 
-Para abrir los notebooks ejecuta el siguiente comando, que levanta Jupyter Lab usando el entorno del proyecto:
+Antes de abrir los notebooks, **registra el kernel del proyecto en Jupyter** (una sola vez por máquina). Esto asegura que los notebooks usen el `.venv` con todas las dependencias instaladas, no un Python global donde pandas/xgboost/etc no existan:
+
+```bash
+uv run python -m ipykernel install --user --name sinfama-rpa --display-name "Python (Sinfama RPA · .venv)"
+```
+
+Luego levanta Jupyter Lab usando el entorno del proyecto:
 
 ```bash
 uv run jupyter lab
 ```
 
-Luego abre los notebooks en orden desde la interfaz de Jupyter:
+Abre los notebooks en orden desde la interfaz de Jupyter:
 
 ```
 notebooks/01_preprocesamiento.ipynb   ← genera Procesos_clean.db
 notebooks/02_eda_roi.ipynb            ← EDA y genera data/roi_dataset.csv
 notebooks/03_modelo_roi.ipynb         ← entrena y guarda models/roi_model.joblib
 ```
+
+> **Importante:** la metadata de los notebooks ya apunta al kernel `sinfama-rpa`, por lo que Jupyter lo seleccionará automáticamente al abrirlos. Si ves un error tipo `ModuleNotFoundError: No module named 'pandas'`, casi seguro estás usando un kernel distinto — verifica en la esquina superior derecha del notebook que el kernel activo sea **"Python (Sinfama RPA · .venv)"**; si no, cámbialo desde el menú **Kernel → Change Kernel**.
 
 > **Nota:** el modelo XGBoost (`03_modelo_roi.ipynb` y `scripts/train_roi_model.py`) es exploratorio y **no está integrado en la app**. La calculadora de ROI de la pestaña 3 usa exclusivamente la fórmula determinística.
 
@@ -333,6 +370,27 @@ Es normal — Streamlit carga el modelo Whisper en RAM la primera vez (~3 s adic
 
 No tienes drivers NVIDIA o no tienes GPU NVIDIA. **No es un problema** — la app detecta esto y hace fallback automático a CPU para Ollama. Solo será más lento responder en el chat.
 
+### El botón ▶ Escuchar respuesta no aparece
+
+- Verifica que `edge-tts` esté instalado: `uv pip show edge-tts`. Si no, ejecuta `uv sync`.
+- Revisa en la barra lateral de la app la sección **Voz TTS** — muestra si Edge TTS está disponible o el motivo de falla.
+
+### Edge TTS falla o no reproduce audio
+
+- **Sin internet:** Edge TTS requiere conexión a internet. Verifica la conectividad.
+- **Firewall corporativo:** algunos firewalls bloquean el dominio `speech.platform.bing.com`. Si el entorno es corporativo sin salida a internet, Edge TTS no funcionará — considera integrar Piper (offline).
+- **Error de biblioteca:** reinstala con `uv sync --upgrade`. En casos extremos: `uv pip install edge-tts --upgrade`.
+
+### La descarga de Piper falla o es lenta
+
+El script `download_piper.py` descarga desde HuggingFace (~60 MB). Si falla por conexión:
+
+```bash
+uv run python scripts/download_piper.py
+```
+
+Vuelve a correrlo — la descarga es idempotente (verifica si el archivo ya existe antes de descargar). Si el dominio HuggingFace está bloqueado, descarga manualmente los archivos `es_MX-ald-medium.onnx` y `es_MX-ald-medium.onnx.json` y colócalos en `models/tts/`.
+
 ---
 
 ## Funcionalidades
@@ -343,6 +401,8 @@ Haz preguntas en español sobre los datos por **texto o por voz**. El agente gen
 **Por texto:** escribe la pregunta en el campo inferior y presiona Enter.
 
 **Por voz:** presiona **🎤 Grabar pregunta**, di la pregunta, presiona **⏹️ Detener**. La app transcribe el audio localmente con Whisper y envía el texto al agente automáticamente.
+
+**Escuchar la respuesta:** una vez que el agente responde, aparece el botón **▶ Escuchar respuesta**. Al pulsarlo, Edge TTS sintetiza la respuesta con voz colombiana (`es-CO-SalomeNeural`) y la reproduce en el navegador. El botón alterna entre ▶ y ❚❚ para pausar.
 
 Ejemplos:
 - *"¿Cuáles son los 5 bots con más ejecuciones?"*
@@ -364,6 +424,74 @@ Calcula el ROI esperado de un nuevo proceso RPA aplicando la fórmula del negoci
 - Duración estimada del robot (horas)
 
 El costo operativo del robot es **fijo en 7.300 COP/hora** (servidor Azure + licencia UiPath). La pestaña muestra ROI%, ahorro neto, beneficio bruto y costo total, junto con un expander que detalla la fórmula aplicada paso a paso.
+
+---
+
+## Síntesis de Voz (TTS)
+
+La app convierte las respuestas del agente SQL a audio con dos implementaciones posibles:
+
+### TTS activo — Edge TTS (nube, por defecto)
+
+La implementación actual usa **Microsoft Edge TTS** vía la librería `edge-tts` (incluida en `uv sync`). La voz por defecto es `es-CO-SalomeNeural` (colombiana femenina). Alternativa masculina: `es-CO-GonzaloNeural`.
+
+| Aspecto | Detalle |
+|---|---|
+| Conectividad | **Requiere internet** (API de Microsoft) |
+| Latencia | 1–3 s por respuesta |
+| Calidad | Alta (voz neuronal de Microsoft) |
+| Costo | Gratuito (uso razonable) |
+| Configuración | Ninguna — se activa automáticamente al instalar `edge-tts` |
+
+El estado de Edge TTS se muestra en la barra lateral de la app. Si `edge-tts` no está instalado, el botón de escuchar no aparece y la app funciona normalmente sin audio.
+
+### TTS alternativo — Piper (local, sin internet)
+
+El paquete `piper-tts` viene en las dependencias del proyecto (`uv sync`). Para activarlo, descarga el modelo de voz:
+
+```bash
+# Descargar el modelo Piper a models/tts/  (~62 MB)
+uv run python scripts/download_piper.py
+```
+
+Una vez descargado, **la app usa Piper automáticamente** (prioridad sobre Edge TTS). El archivo se guarda en:
+```
+models/tts/
+├── es_MX-claude-high.onnx
+└── es_MX-claude-high.onnx.json
+```
+
+`es_MX-claude-high` es una voz **femenina latinoamericana en calidad alta** (22 kHz). Es la voz Piper más cercana al acento colombiano/paisa (Piper no tiene voz colombiana oficial; la mexicana es la alternativa más natural). La sintetización ocurre **localmente en CPU** con `onnxruntime`, sin internet.
+
+| Aspecto | Detalle |
+|---|---|
+| Tipo | Voz neuronal femenina, español de México |
+| Conectividad | **Sin internet** (modelo ONNX local) |
+| Sample rate | 22.050 Hz (calidad high) |
+| Latencia | 0.5–2 s en CPU moderna |
+| Tamaño en disco | ~62 MB |
+| Activación | Automática si existe `models/tts/es_MX-claude-high.onnx` |
+
+### Resolución TTS (cascada)
+
+En cada respuesta, la app intenta en este orden:
+1. **Piper local** — si `piper-tts` está instalado y el modelo ONNX existe en `models/tts/`.
+2. **Edge TTS (nube)** — fallback si Piper no está disponible o falla.
+3. Sin audio — si ningún motor está disponible (la app sigue funcionando, solo sin voz).
+
+El motor activo se muestra en la barra lateral de la app bajo "Voz TTS".
+
+### Cambiar la voz de Edge TTS
+
+Edita la constante en `app/chat.py`:
+
+```python
+TTS_VOICE = "es-CO-SalomeNeural"   # voz actual (colombiana femenina)
+# Alternativas:
+# TTS_VOICE = "es-CO-GonzaloNeural"  # colombiana masculina
+# TTS_VOICE = "es-MX-DaliaNeural"    # mexicana femenina
+# TTS_VOICE = "es-ES-ElviraNeural"   # española
+```
 
 ---
 
@@ -430,5 +558,6 @@ XGBoostRegressor con transformación `log1p(ROI)` para manejar la distribución 
 - **API `MediaRecorder` solo en `localhost` o HTTPS:** si despliegas la app en otra máquina por IP en HTTP, el botón de micrófono fallará silenciosamente.
 - **Latencia del LLM en CPU:** sin GPU, una respuesta del agente SQL puede tardar 20–60 s. Con GPU NVIDIA (≥ 6 GB VRAM) baja a unos pocos segundos.
 - **Costo operativo fijo del robot (7.300 COP/h):** es un promedio basado en la infraestructura actual (Azure + UiPath). Cambios reales en licenciamiento o infraestructura requieren actualizar el valor en la fórmula.
+- **Edge TTS requiere internet:** si el modelo Piper no está descargado (ver paso `download_piper.py`), la app cae a Edge TTS, que requiere conexión a internet. Si no hay internet y no hay modelo Piper, el botón de audio simplemente no se muestra (la app sigue funcionando sin voz).
 
 

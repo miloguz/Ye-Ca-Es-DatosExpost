@@ -87,3 +87,65 @@ def get_db_stats() -> dict:
         stats["fecha_fin"] = fecha_max
 
     return stats
+
+
+# Esquema esperado por la app: tabla → columnas mínimas requeridas.
+# Si cualquiera de estas columnas falta, los joins de roi_calculator o las
+# consultas del agente SQL fallarán con errores crípticos. Validar al inicio.
+EXPECTED_SCHEMA: dict[str, set[str]] = {
+    "RegistrosDPA_clean": {
+        "Automatizacion", "Duracion_Ejecucion", "Numero_Transacciones",
+        "Fecha_ejecucion", "Exitosas", "ErroresNegocio", "Area",
+    },
+    "TiemposManuales_clean": {
+        "NombreBot", "TiempoManualHoras", "Tecnologia", "Estado",
+        "FechaSalidaProduccion",
+    },
+    "RolesAreas_clean": {
+        "NombreBot", "AreaImpactada", "Rol_Impactado",
+        "ValorHoraProyecto", "Tipo_Impacto",
+    },
+}
+
+
+def validate_db_schema() -> tuple[bool, list[str]]:
+    """Verifica que la BD exista y tenga las tablas/columnas esperadas.
+
+    Retorna (ok, errores). Si ok=True, errores está vacío. Si ok=False,
+    errores contiene mensajes legibles para mostrar al usuario.
+    """
+    errors: list[str] = []
+
+    if not DB_PATH.exists():
+        errors.append(
+            f"No se encontró la base de datos en {DB_PATH}. "
+            f"Ejecuta `git lfs pull` o regenera con `notebooks/01_preprocesamiento.ipynb`."
+        )
+        return False, errors
+
+    try:
+        with get_connection() as conn:
+            existing_tables = {
+                row[0]
+                for row in conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                ).fetchall()
+            }
+            for table, required_cols in EXPECTED_SCHEMA.items():
+                if table not in existing_tables:
+                    errors.append(f"Falta la tabla '{table}' en la BD.")
+                    continue
+                cols_in_db = {
+                    row[1]
+                    for row in conn.execute(f"PRAGMA table_info({table})").fetchall()
+                }
+                missing = required_cols - cols_in_db
+                if missing:
+                    errors.append(
+                        f"En la tabla '{table}' faltan columnas: {sorted(missing)}."
+                    )
+    except sqlite3.DatabaseError as exc:
+        errors.append(f"La BD existe pero no es legible: {exc}")
+        return False, errors
+
+    return len(errors) == 0, errors

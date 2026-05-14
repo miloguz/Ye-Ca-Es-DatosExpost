@@ -11,6 +11,7 @@ import base64
 import io
 import re
 import sys
+import wave
 from pathlib import Path
 
 import pandas as pd
@@ -18,7 +19,7 @@ import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.agent.database import get_db_stats
+from src.agent.database import get_db_stats, validate_db_schema
 from src.agent.sql_agent import DEFAULT_MODEL, ask, list_available_models
 from src.utils.roi_calculator import COSTO_HORA_ROBOT_COP, build_roi_dataset, get_roi_summary
 
@@ -40,16 +41,43 @@ def transcribe_audio(audio_bytes: bytes) -> str:
     return " ".join(seg.text for seg in segments).strip()
 
 
-TTS_VOICE = "es-CO-SalomeNeural"  # colombiana femenina; alternativa: es-CO-GonzaloNeural
+TTS_VOICE_EDGE = "es-CO-SalomeNeural"  # colombiana femenina; alternativa: es-CO-GonzaloNeural
+PIPER_VOICE = "es_MX-claude-high"  # voz Piper offline femenina latinoamericana (HQ)
+PIPER_MODEL_DIR = Path(__file__).parent.parent / "models" / "tts"
+
+
+def _piper_available() -> tuple[bool, Path | None]:
+    """Comprueba si el paquete piper-tts y el modelo ONNX están disponibles."""
+    try:
+        import piper  # noqa: F401, PLC0415
+    except ImportError:
+        return False, None
+    model_path = PIPER_MODEL_DIR / f"{PIPER_VOICE}.onnx"
+    config_path = PIPER_MODEL_DIR / f"{PIPER_VOICE}.onnx.json"
+    if not model_path.exists() or not config_path.exists():
+        return False, None
+    return True, model_path
+
+
+def _edge_tts_available() -> bool:
+    try:
+        import edge_tts  # noqa: F401, PLC0415
+        return True
+    except ImportError:
+        return False
 
 
 def _tts_available() -> tuple[bool, str]:
-    """Retorna (disponible, mensaje) según si edge-tts está instalado."""
-    try:
-        import edge_tts  # noqa: F401, PLC0415
-        return True, f"🔊 Edge TTS · {TTS_VOICE}"
-    except ImportError:
-        return False, "🔇 edge-tts no instalado (ejecuta: uv sync)"
+    """Retorna (disponible, mensaje) según el motor TTS detectado.
+
+    Prioridad: Piper local (offline) > Edge TTS (nube).
+    """
+    piper_ok, _ = _piper_available()
+    if piper_ok:
+        return True, f"🔊 Piper local · {PIPER_VOICE}"
+    if _edge_tts_available():
+        return True, f"🔊 Edge TTS (nube) · {TTS_VOICE_EDGE}"
+    return False, "🔇 Sin motor TTS disponible (ejecuta: uv sync)"
 
 
 def _strip_md(text: str) -> str:
@@ -64,13 +92,34 @@ def _strip_md(text: str) -> str:
     return re.sub(r"\n{3,}", "\n\n", text).strip()
 
 
-def synthesize_speech(text: str) -> bytes | None:
-    """Genera bytes MP3 usando Microsoft Edge TTS con voz colombiana."""
+@st.cache_resource(show_spinner=False)
+def _load_piper_voice():
+    """Carga el modelo Piper ONNX y lo cachea entre reruns."""
+    from piper import PiperVoice  # noqa: PLC0415
+
+    model_path = PIPER_MODEL_DIR / f"{PIPER_VOICE}.onnx"
+    return PiperVoice.load(str(model_path))
+
+
+def _synthesize_piper(text: str) -> bytes | None:
+    """Genera bytes WAV con Piper TTS local (sin internet)."""
+    try:
+        voice = _load_piper_voice()
+        buffer = io.BytesIO()
+        with wave.open(buffer, "wb") as wf:
+            voice.synthesize_wav(text, wf)
+        return buffer.getvalue()
+    except Exception:
+        return None
+
+
+def _synthesize_edge_tts(text: str) -> bytes | None:
+    """Genera bytes MP3 con Microsoft Edge TTS (requiere internet)."""
     try:
         import edge_tts  # noqa: PLC0415
 
         async def _synth() -> bytes:
-            communicate = edge_tts.Communicate(_strip_md(text), TTS_VOICE)
+            communicate = edge_tts.Communicate(text, TTS_VOICE_EDGE)
             audio_data = bytearray()
             async for chunk in communicate.stream():
                 if chunk["type"] == "audio":
@@ -86,11 +135,23 @@ def synthesize_speech(text: str) -> bytes | None:
         return None
 
 
+def synthesize_speech(text: str) -> bytes | None:
+    """Sintetiza la respuesta. Prioriza Piper local; fallback a Edge TTS."""
+    text_clean = _strip_md(text)
+    piper_ok, _ = _piper_available()
+    if piper_ok:
+        audio = _synthesize_piper(text_clean)
+        if audio:
+            return audio
+    return _synthesize_edge_tts(text_clean)
+
+
 def audio_play_button(audio_bytes: bytes, key: str) -> None:
-    """Botón play/pause con audio MP3 embebido — sin barra de progreso."""
+    """Botón play/pause con audio embebido (detecta WAV vs MP3 por header)."""
+    mime = "audio/wav" if audio_bytes[:4] == b"RIFF" else "audio/mpeg"
     b64 = base64.b64encode(audio_bytes).decode()
     html = f"""
-    <audio id="a_{key}" src="data:audio/mpeg;base64,{b64}" preload="auto"></audio>
+    <audio id="a_{key}" src="data:{mime};base64,{b64}" preload="auto"></audio>
     <button id="b_{key}"
       onclick="(function(){{
         var a=document.getElementById('a_{key}');
@@ -125,6 +186,20 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+# ── Validación del esquema de la BD ───────────────────────────────────────────
+_db_ok, _db_errors = validate_db_schema()
+if not _db_ok:
+    st.error("**Error en la base de datos**: la app no puede arrancar.")
+    for _err in _db_errors:
+        st.error(f"• {_err}")
+    st.info(
+        "Soluciones:\n"
+        "1. `git lfs pull` para descargar las BDs versionadas.\n"
+        "2. Ejecuta `notebooks/01_preprocesamiento.ipynb` para regenerar `Procesos_clean.db`.\n"
+        "3. Verifica que la versión de `csv_to_sqlite.py` coincida con la esperada."
+    )
+    st.stop()
 
 # ── Tema Comfama ──────────────────────────────────────────────────────────────
 st.markdown(
@@ -558,7 +633,12 @@ with st.sidebar:
         st.rerun()
 
 # ── Área principal — pestañas ─────────────────────────────────────────────────
-tab_chat, tab_roi, tab_calc = st.tabs(["💬 Chat SQL", "📊 Análisis ROI", "🧮 Calculadora de ROI"])
+tab_chat, tab_roi, tab_calc, tab_model = st.tabs([
+    "💬 Chat SQL",
+    "📊 Análisis ROI",
+    "🧮 Calculadora de ROI",
+    "🤖 Modelo Predictivo (experimental)",
+])
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TAB 1 · CHAT
@@ -813,3 +893,216 @@ with tab_calc:
                 st.warning("ROI positivo pero bajo. Considera optimizar el proceso.")
             else:
                 st.error("ROI negativo. Este proceso puede no ser rentable para RPA.")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TAB 4 · MODELO PREDICTIVO (EXPERIMENTAL)
+# ─────────────────────────────────────────────────────────────────────────────
+with tab_model:
+    import json
+    import plotly.express as px
+
+    st.markdown("### Modelo predictivo de ROI — XGBoost (experimental)")
+
+    st.warning(
+        "**⚠️ Esta pestaña es exploratoria, no operativa.** El modelo fue entrenado "
+        "con solo ~30 bots con datos completos en las tres tablas, lo que produce "
+        "alta varianza en validación cruzada. La pestaña 3 (Calculadora) usa la "
+        "**fórmula determinística** del negocio, no este modelo. Aquí mostramos el "
+        "modelo para cerrar el ciclo análisis → producto y para inspección de "
+        "importancia de variables."
+    )
+
+    MODELS_DIR = Path(__file__).parent.parent / "models"
+    REPORTS_DIR = Path(__file__).parent.parent / "reports"
+    MODEL_FILE = MODELS_DIR / "roi_model.joblib"
+    METRICS_FILE = REPORTS_DIR / "metrics_roi.json"
+
+    if not MODEL_FILE.exists():
+        st.info(
+            "**El modelo aún no se ha entrenado.** Ejecuta uno de los siguientes "
+            "para generarlo:\n\n"
+            "```bash\n"
+            "uv run python scripts/train_roi_model.py\n"
+            "```\n\n"
+            "O abre `notebooks/03_modelo_roi.ipynb` desde Jupyter."
+        )
+    else:
+        try:
+            import joblib  # noqa: PLC0415
+            from src.models.roi_predictor import get_feature_importance  # noqa: PLC0415
+
+            artifact = joblib.load(MODEL_FILE)
+            pipeline = artifact["pipeline"]
+            saved_metrics = artifact.get("metrics", {})
+        except Exception as exc:
+            st.error(f"No se pudo cargar el modelo: {exc}")
+            st.stop()
+
+        # Si hay reports/metrics_roi.json, mostrarlo (más reciente que el embebido)
+        metrics: dict = saved_metrics
+        if METRICS_FILE.exists():
+            try:
+                metrics = json.loads(METRICS_FILE.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+
+        st.markdown("#### Métricas del último entrenamiento")
+        n_total = metrics.get("n_total", metrics.get("n_train", 0) + metrics.get("n_test", 0))
+        if n_total and n_total < 50:
+            st.error(
+                f"**n_total = {n_total}** muestras. "
+                "Con menos de 50 muestras y 13 features, cualquier modelo tabular "
+                "estará dominado por el ruido. Lee las métricas con escepticismo: "
+                "el CV R² es lo único que importa."
+            )
+
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric(
+            "R² (test, log)",
+            f"{metrics.get('r2', 0):.3f}" if "r2" in metrics else "N/A",
+            help="Sobre el split de test. Con n_test ≈ 6 es muy inestable.",
+        )
+        ci_low = metrics.get("r2_test_ci95_low")
+        ci_high = metrics.get("r2_test_ci95_high")
+        if ci_low is not None and ci_high is not None:
+            m2.metric(
+                "R² CI95% (bootstrap)",
+                f"[{ci_low:.2f}, {ci_high:.2f}]",
+                help="Intervalo de confianza al 95% via bootstrap del split de test.",
+            )
+        m3.metric(
+            "R² CV-5 media ± std",
+            f"{metrics.get('cv_r2_mean', 0):.3f} ± {metrics.get('cv_r2_std', 0):.3f}"
+            if "cv_r2_mean" in metrics else "N/A",
+            help="Esta es la métrica que importa. Cerca de cero ⇒ el modelo no generaliza.",
+        )
+        m4.metric(
+            "MAE (% ROI)",
+            f"{metrics.get('mae_pct', 0):,.0f}" if "mae_pct" in metrics else "N/A",
+            help="Error absoluto medio en puntos porcentuales de ROI.",
+        )
+
+        # Baseline Ridge (sanity check)
+        if "baseline_r2" in metrics:
+            st.markdown("#### Baseline · Ridge sobre log(ROI)")
+            st.caption(
+                "Sanity check: ¿XGBoost supera de forma consistente a una regresión lineal regularizada? "
+                "Si no la supera en CV (la métrica más confiable con n pequeño), XGBoost no aporta valor "
+                "y la fórmula determinística sigue siendo la mejor opción operativa."
+            )
+            b1, b2, b3 = st.columns(3)
+            b1.metric("Baseline R² (test, log)", f"{metrics['baseline_r2']:.3f}")
+            b2.metric(
+                "Baseline R² CV-5",
+                f"{metrics['baseline_cv_r2_mean']:.3f} ± {metrics['baseline_cv_r2_std']:.3f}",
+            )
+            b3.metric("Baseline MAE", f"{metrics['baseline_mae_pct']:,.0f}")
+
+            delta_cv = metrics["cv_r2_mean"] - metrics["baseline_cv_r2_mean"]
+            if delta_cv > 0.05:
+                st.info(
+                    f"XGBoost supera al baseline en CV por **+{delta_cv:.3f}** R². "
+                    "Aporta señal sobre la lineal, aunque con n bajo la diferencia puede no ser robusta."
+                )
+            else:
+                st.warning(
+                    f"XGBoost solo supera al baseline en CV por **{delta_cv:+.3f}** R². "
+                    "Con esta diferencia, no hay evidencia de que el modelo no-lineal aporte sobre Ridge. "
+                    "La fórmula determinística sigue siendo la opción operativa correcta."
+                )
+
+        # Importancia de variables
+        st.markdown("#### Importancia de variables (XGBoost)")
+        try:
+            imp = get_feature_importance(top_n=15, pipeline=pipeline)
+            fig_imp = px.bar(
+                imp.sort_values("importance"),
+                x="importance",
+                y="feature",
+                orientation="h",
+                color="importance",
+                color_continuous_scale="Magma",
+                labels={"importance": "Importancia", "feature": "Variable"},
+            )
+            fig_imp.update_layout(height=450, coloraxis_showscale=False)
+            st.plotly_chart(fig_imp, use_container_width=True)
+            st.caption(
+                "Las variables que dominan (TiempoManualHoras, ValorHoraPromedio, "
+                "DuracionPromedio_Horas, TasaExito) son exactamente las que componen "
+                "la fórmula determinística del ROI. El modelo *redescubre la fórmula* "
+                "desde los datos en lugar de aprender una relación nueva."
+            )
+        except Exception as exc:
+            st.error(f"No se pudo calcular feature importance: {exc}")
+
+        # Predicción puntual (con disclaimer)
+        st.markdown("#### Predicción puntual (con advertencia)")
+        st.caption(
+            "Esta predicción se ofrece **solo con fines exploratorios**. Para decisiones "
+            "operativas, usa la pestaña 'Calculadora de ROI' que aplica la fórmula auditable."
+        )
+
+        with st.form("model_predict"):
+            c1, c2 = st.columns(2)
+            with c1:
+                p_tiempo = st.number_input("TiempoManualHoras", min_value=0.01, value=2.0, step=0.25)
+                p_ejec = st.number_input("Num_Ejecuciones", min_value=1, value=500, step=50)
+                p_dur = st.number_input("DuracionPromedio_Horas", min_value=0.001, value=0.2, step=0.05)
+                p_trans = st.number_input("PromTransacciones", min_value=0.0, value=10.0, step=1.0)
+                p_exito = st.slider("TasaExito", 0.0, 1.0, 0.95, 0.01)
+                p_error = st.slider("TasaError", 0.0, 1.0, 0.02, 0.01)
+            with c2:
+                p_valor = st.number_input("ValorHoraPromedio (COP)", min_value=5000, value=30000, step=1000)
+                p_ejdia = st.number_input("EjecucionesPorDia", min_value=0.01, value=2.0, step=0.5)
+                p_dias = st.number_input("DiasEnProduccion", min_value=1, value=180, step=30)
+                p_areas = st.number_input("NumAreas", min_value=1, value=1, step=1)
+                p_roles = st.number_input("NumRoles", min_value=1, value=1, step=1)
+                p_tec = st.selectbox("Tecnologia", ["UiPath", "IRPA", "Power Automate", "Desconocida"])
+                p_est = st.selectbox("Estado", ["Activo", "Inactivo", "Desconocido"])
+
+            predict_btn = st.form_submit_button("Predecir ROI con el modelo", type="primary")
+
+        if predict_btn:
+            row = pd.DataFrame([{
+                "TiempoManualHoras": p_tiempo,
+                "Num_Ejecuciones": p_ejec,
+                "DuracionPromedio_Horas": p_dur,
+                "PromTransacciones": p_trans,
+                "TasaExito": p_exito,
+                "TasaError": p_error,
+                "ValorHoraPromedio": p_valor,
+                "EjecucionesPorDia": p_ejdia,
+                "DiasEnProduccion": p_dias,
+                "NumAreas": p_areas,
+                "NumRoles": p_roles,
+                "Tecnologia": p_tec,
+                "Estado": p_est,
+            }])
+
+            import numpy as np  # noqa: PLC0415
+            try:
+                pred_log = pipeline.predict(row)[0]
+                pred_pct = float(np.expm1(pred_log))
+
+                # Referencia de la fórmula
+                beneficio = p_tiempo * p_valor * p_ejec
+                costo = p_dur * COSTO_HORA_ROBOT_COP * p_ejec
+                roi_formula = (beneficio - costo) / costo * 100 if costo > 0 else 0
+
+                c1, c2 = st.columns(2)
+                c1.metric("ROI predicho (XGBoost)", f"{pred_pct:,.0f}%")
+                c2.metric(
+                    "ROI fórmula (referencia)",
+                    f"{roi_formula:,.0f}%",
+                    delta=f"{pred_pct - roi_formula:+,.0f} pp",
+                    help="Diferencia entre la predicción del modelo y la fórmula del negocio.",
+                )
+                st.info(
+                    "Si la diferencia es grande, **confía en la fórmula** — el modelo "
+                    "tiene CV R² cerca de cero y puede dar valores poco confiables. "
+                    "La predicción del modelo se ofrece para comprender qué variables "
+                    "lo mueven, no para sustituir el cálculo del negocio."
+                )
+            except Exception as exc:
+                st.error(f"No se pudo predecir: {exc}")
